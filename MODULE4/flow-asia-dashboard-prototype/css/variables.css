@@ -1,0 +1,48 @@
+:root {
+  --bg: #0B0B0C;
+  --card: #161618;
+  --ink: #F4F4F5;
+  --ink-muted: #A1A1AA;
+  --line: #2A2A2E;
+  --g: #B8FF2C;
+  --g-dim: rgba(184, 255, 44, 0.15);
+  --soft: #1F1F22;
+  --danger: #FF4D4D;
+  --warning: #FFB800;
+  --info: #38BDF8;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --font: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+[data-theme="light"] {
+  --bg: #F2F2F3;
+  --card: #FFFFFF;
+  --ink: #0A0A0A;
+  --ink-muted: #71717A;
+  --line: #DEDEE2;
+  --g: #8AE600;
+  --g-dim: rgba(138, 230, 0, 0.18);
+  --soft: #EDEDEF;
+  --danger: #E53E3E;
+  --warning: #DD6B20;
+  --info: #0284C7;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: var(--font);
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+  display: flex;
+  font-size: 14px;
+  line-height: 1.5;
+}
