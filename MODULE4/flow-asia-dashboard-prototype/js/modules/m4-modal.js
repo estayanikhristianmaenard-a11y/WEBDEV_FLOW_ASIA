@@ -1,3 +1,5 @@
+import { icon } from '../core/icons.js';
+
 export function initModal() {
   document.getElementById('modal-close-btn').addEventListener('click', closeModal);
   document.getElementById('modal-dismiss-btn').addEventListener('click', closeModal);
@@ -22,7 +24,7 @@ export function openDayModal(day, data) {
     document.getElementById('modal-ot').textContent = '0.0 hrs';
     document.getElementById('modal-cr-box').innerHTML = `
       <div class="cr-badge-box cr3-report">
-        <span>📝 Daily Progress Report Submitted</span>
+        <span>${icon('report')} Daily Progress Report Submitted</span>
         <button class="btn btn-secondary report-btn" type="button">View Report</button>
       </div>
     `;
@@ -39,7 +41,7 @@ export function openDayModal(day, data) {
     if (data.type === 'INV') {
       crContent += `
         <div class="cr-badge-box cr1-invalid">
-          <strong>⚠️ CR1: Punch Status Invalid</strong>
+          <strong>${icon('warning')} CR1: Punch Status Invalid</strong>
           <div style="font-size:0.75rem; margin-top:4px;">${data.rejectionReason}</div>
         </div>
       `;
@@ -47,7 +49,7 @@ export function openDayModal(day, data) {
     if (data.report) {
       crContent += `
         <div class="cr-badge-box cr3-report" style="margin-top:8px;">
-          <span>📝 Daily Progress Report Submitted</span>
+          <span>${icon('report')} Daily Progress Report Submitted</span>
           <button class="btn btn-secondary report-btn" type="button">View Report</button>
         </div>
       `;

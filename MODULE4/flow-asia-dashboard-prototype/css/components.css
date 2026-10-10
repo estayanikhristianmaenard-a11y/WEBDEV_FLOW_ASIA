@@ -1,3 +1,9 @@
+.ui-icon { width: 18px; height: 18px; display: inline-block; flex-shrink: 0; vertical-align: middle; }
+[data-icon] { display: inline-flex; align-items: center; flex-shrink: 0; }
+.role-switcher-title .ui-icon { width: 14px; height: 14px; }
+.switch-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.close-btn { display: inline-flex; align-items: center; justify-content: center; }
+.cr-badge-box .ui-icon { margin-right: 5px; }
 .dashboard-view { display: flex; flex-direction: column; gap: 24px; }
 .dashboard-view.hidden { display: none !important; }
 .g4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }

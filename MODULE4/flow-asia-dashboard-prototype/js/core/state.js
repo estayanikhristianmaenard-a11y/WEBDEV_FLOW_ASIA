@@ -21,6 +21,7 @@ class StateManager {
 
   setRole(role) {
     this.state.role = role;
+    this.state.inspectedEmployeeId = null;
     this.notify();
   }
 

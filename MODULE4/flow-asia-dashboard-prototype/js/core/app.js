@@ -1,4 +1,6 @@
 import { store } from './state.js';
+import { mockEmployees } from '../data/mock-employees.js';
+import { icon, initIcons } from './icons.js';
 import { initTheme } from './theme.js';
 import { renderCalendar } from '../modules/m4-calendar.js';
 import { initModal } from '../modules/m4-modal.js';
@@ -6,10 +8,20 @@ import { initMIS } from '../modules/m11-mis.js';
 import { initCharts } from '../modules/m11-charts.js';
 
 document.addEventListener('DOMContentLoaded', () => {
+  initIcons();
   initTheme();
   initModal();
+  if (window.flowAsiaBackend) {
+    import('../modules/m4-backend.js').then(module => module.initBackendDashboard()).catch(error => {
+      const message = document.createElement('p');
+      message.setAttribute('role', 'alert');
+      message.textContent = `Dashboard could not load: ${error.message}`;
+      document.querySelector('main').prepend(message);
+    });
+    return;
+  }
   initMIS();
-  initCharts();
+  if (typeof Chart !== 'undefined') initCharts();
   renderCalendar('EMP-001');
 
   const roleBtn = document.getElementById('role-toggle-btn');
@@ -44,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
       userName.textContent = 'HR Manager';
       userRole.textContent = 'People Operations';
       avatar.textContent = 'HR';
-      roleBtn.innerHTML = '🔄 Switch to Staff View';
+      roleBtn.innerHTML = `${icon('switch')} Switch to Staff View`;
     } else {
       hrView.classList.add('hidden');
       staffView.classList.remove('hidden');
@@ -54,10 +66,18 @@ document.addEventListener('DOMContentLoaded', () => {
       userName.textContent = 'Maria Santos';
       userRole.textContent = 'Creative Designer';
       avatar.textContent = 'MS';
-      roleBtn.innerHTML = '🔄 Switch to HR Admin';
+      roleBtn.innerHTML = `${icon('switch')} Switch to HR Admin`;
     }
 
-    if (state.inspectedEmployeeId) {
+    const inspecting = state.role === 'HR_ADMIN' && Boolean(state.inspectedEmployeeId);
+    document.getElementById('calendar-inspection-header').classList.toggle('hidden', !inspecting);
+    document.getElementById('hr-inspection-banner').classList.toggle('hidden', !inspecting);
+    document.getElementById('personal-quick-actions').hidden = inspecting;
+    if (inspecting) {
+      const employee = mockEmployees.find(item => item.id === state.inspectedEmployeeId);
+      document.getElementById('calendar-employee-name').textContent = employee.name;
+      document.getElementById('calendar-employee-meta').textContent = `${employee.id} · ${employee.department} · ${employee.title}`;
+      document.getElementById('inspected-emp-name').textContent = employee.name;
       renderCalendar(state.inspectedEmployeeId);
       staffView.classList.remove('hidden');
     } else {

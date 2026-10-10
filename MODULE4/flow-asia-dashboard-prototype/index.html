@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="./css/layout.css">
   <link rel="stylesheet" href="./css/components.css">
   <link rel="stylesheet" href="./css/modules/m4-calendar.css">
+  <link rel="stylesheet" href="./css/modules/m4-backend.css">
   <link rel="stylesheet" href="./css/modules/m11-mis.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -25,19 +26,19 @@
         </a>
         <nav class="nav-group" aria-label="Main navigation">
           <div class="nav-header">Workspace</div>
-          <button class="nv on" type="button"><span aria-hidden="true">▦</span> Dashboard</button>
-          <button class="nv" type="button"><span aria-hidden="true">◷</span> Attendance</button>
-          <button class="nv" type="button"><span aria-hidden="true">▣</span> Leave &amp; requests</button>
+          <button class="nv on" type="button"><span data-icon="dashboard" aria-hidden="true"></span> Dashboard</button>
+          <button class="nv" type="button"><span data-icon="clock" aria-hidden="true"></span> Attendance</button>
+          <button class="nv" type="button"><span data-icon="calendar" aria-hidden="true"></span> Leave &amp; requests</button>
           <div class="nav-header">Management</div>
-          <button class="nv" type="button"><span aria-hidden="true">◉</span> Employees</button>
-          <button class="nv" type="button"><span aria-hidden="true">▤</span> Reports</button>
+          <button class="nv" type="button"><span data-icon="users" aria-hidden="true"></span> Employees</button>
+          <button class="nv" type="button"><span data-icon="report" aria-hidden="true"></span> Reports</button>
         </nav>
       </div>
       <div class="aside-footer">
-        <button class="switch-btn" id="theme-toggle-btn" type="button">🌙 Dark Mode</button>
+        <button class="switch-btn" id="theme-toggle-btn" type="button" aria-label="Toggle color theme"><span data-icon="moon" aria-hidden="true"></span> Dark Mode</button>
         <div class="role-switcher-card">
-          <div class="role-switcher-title">Preview role <span aria-hidden="true">↻</span></div>
-          <button class="switch-btn" id="role-toggle-btn" type="button">🔄 Switch to HR Admin</button>
+          <div class="role-switcher-title">Preview role <span data-icon="switch" aria-hidden="true"></span></div>
+          <button class="switch-btn" id="role-toggle-btn" type="button"><span data-icon="switch" aria-hidden="true"></span> Switch to HR Admin</button>
         </div>
         <div class="user-profile">
           <div class="avatar" id="user-avatar">MS</div>
@@ -57,11 +58,15 @@
           <p id="header-dashboard-sub">Personal monthly attendance, schedule &amp; leave tracking</p>
         </div>
         <div class="header-actions">
-          <button class="btn btn-secondary" id="export-pdf-btn" type="button">↧ Export / Print</button>
+          <button class="btn btn-secondary" id="export-pdf-btn" type="button"><span data-icon="download" aria-hidden="true"></span> Export / Print</button>
         </div>
       </header>
 
       <section class="dashboard-view" id="staff-dashboard-view" aria-label="Staff attendance dashboard">
+        <div class="inspection-banner hidden" id="calendar-inspection-header" aria-live="polite">
+          <div><strong id="calendar-employee-name"></strong><div class="muted" id="calendar-employee-meta"></div></div>
+          <span class="read-only-badge">Read-only</span>
+        </div>
         <div class="g4">
           <article class="card card-kpi"><span class="kpi-num" id="kpi-present">18</span><span class="kpi-label">Days present</span><span class="kpi-subtext">Attendance this month</span></article>
           <article class="card card-kpi"><span class="kpi-num" id="kpi-late">1</span><span class="kpi-label">Late arrivals</span><span class="kpi-subtext">This month</span></article>
@@ -79,12 +84,12 @@
               <div class="cal-day-name">Sun</div><div class="cal-day-name">Mon</div><div class="cal-day-name">Tue</div><div class="cal-day-name">Wed</div><div class="cal-day-name">Thu</div><div class="cal-day-name">Fri</div><div class="cal-day-name">Sat</div>
             </div>
             <div class="lg" aria-label="Attendance status legend">
-              <span class="lg-item"><i class="lg-dot" style="background:var(--line)"></i>Present</span>
-              <span class="lg-item"><i class="lg-dot" style="background:var(--ink)"></i>Late</span>
-              <span class="lg-item"><i class="lg-dot" style="background:var(--danger)"></i>Absent</span>
-              <span class="lg-item"><i class="lg-dot" style="background:var(--info)"></i>Leave</span>
-              <span class="lg-item"><i class="lg-dot" style="background:var(--warning)"></i>Invalid punch</span>
-              <span class="lg-item"><i class="lg-dot" style="background:var(--g)"></i>Overtime / holiday</span>
+              <span class="lg-item"><i class="lg-dot legend-present" aria-hidden="true"></i>Present</span>
+              <span class="lg-item"><i class="lg-dot legend-late" aria-hidden="true"></i>Late</span>
+              <span class="lg-item"><i class="lg-dot legend-absent" aria-hidden="true"></i>Absent</span>
+              <span class="lg-item"><i class="lg-dot legend-leave" aria-hidden="true"></i>Leave</span>
+              <span class="lg-item"><i class="lg-dot legend-invalid" aria-hidden="true"></i>Invalid punch</span>
+              <span class="lg-item"><i class="lg-dot legend-overtime" aria-hidden="true"></i>Overtime / holiday</span>
             </div>
           </section>
           <aside class="widget-panel">
@@ -94,10 +99,10 @@
               <div class="leave-row"><span class="leave-type">Sick leave</span><span class="leave-val">10 days</span></div>
               <div class="leave-row"><span class="leave-type">Used this month</span><span class="leave-val" id="leave-balance-used">2 days</span></div>
             </section>
-            <section class="widget-box">
+            <section class="widget-box" id="personal-quick-actions">
               <h2 class="widget-title">Quick actions</h2>
               <p class="muted">Need time off? Submit a leave request to your manager.</p>
-              <button class="btn btn-primary" type="button" id="leave-request-btn">＋ Request leave</button>
+              <button class="btn btn-primary" type="button" id="leave-request-btn"><span data-icon="plus" aria-hidden="true"></span> Request leave</button>
             </section>
           </aside>
         </div>
@@ -111,7 +116,7 @@
         <section class="card">
           <h2 class="widget-title">Employee inspection</h2>
           <div class="hr-search-bar">
-            <span aria-hidden="true">⌕</span>
+            <span data-icon="search" aria-hidden="true"></span>
             <input class="hr-search-input" id="hr-search-input" type="search" placeholder="Search employee by name" aria-label="Search employee by name">
             <button class="btn btn-primary" id="hr-search-btn" type="button">Search</button>
           </div>
@@ -137,7 +142,7 @@
 
   <div class="modal-backdrop" id="day-modal" role="dialog" aria-modal="true" aria-labelledby="modal-date-title">
     <section class="modal-card">
-      <header class="modal-header"><h2 class="modal-title" id="modal-date-title">Attendance details</h2><button class="close-btn" id="modal-close-btn" type="button" aria-label="Close dialog">×</button></header>
+      <header class="modal-header"><h2 class="modal-title" id="modal-date-title">Attendance details</h2><button class="close-btn" id="modal-close-btn" type="button" aria-label="Close dialog"><span data-icon="close" aria-hidden="true"></span></button></header>
       <div class="modal-body-grid">
         <div class="modal-field"><span class="modal-label">Shift</span><span class="modal-val" id="modal-shift"></span></div>
         <div class="modal-field"><span class="modal-label">Status</span><span class="modal-val" id="modal-status"></span></div>

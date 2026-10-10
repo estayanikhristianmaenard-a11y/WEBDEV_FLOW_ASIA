@@ -1,0 +1,19 @@
+/* Integration controls use the existing dashboard palette and components. */
+#employee-search-results { display: flex; flex-direction: column; max-height: 320px; overflow-y: auto; margin-top: 8px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--card); }
+#employee-search-results:empty { display: none; }
+.employee-search-option { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; width: 100%; padding: 12px 16px; border: 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--ink); text-align: left; cursor: pointer; font: inherit; }
+.employee-search-option:last-child { border-bottom: 0; }
+.employee-search-option:hover, .employee-search-option[aria-selected="true"] { background: var(--soft); box-shadow: inset 3px 0 var(--g); }
+.employee-search-option:focus-visible { outline: 2px solid var(--g); outline-offset: -2px; }
+.employee-search-name { font-size: .88rem; font-weight: 700; }
+.employee-search-meta { font-size: .75rem; color: var(--ink-muted); }
+#employee-search-results > p { padding: 12px 16px; margin: 0; }
+.company-event-marker { font-size: .65rem; color: var(--g); overflow-wrap: anywhere; order: 1; }
+/* Keep attendance at the bottom when company events share the cell. */
+.cell .cell-tag { order: 2; }
+#team-indicators p { font-size: .85rem; line-height: 1.5; }
+#company-event-list .req-item { flex-wrap: wrap; gap: 6px; }
+.modal-card form, form.modal-card { display: flex; flex-direction: column; gap: 12px; }
+#backend-status:empty { display: none; }
+.mis-grid[hidden], .widget-box[hidden] { display: none !important; }
+@media print { #backend-status, #employee-search-results, #company-event-list button, .cal-header input { display: none; } }

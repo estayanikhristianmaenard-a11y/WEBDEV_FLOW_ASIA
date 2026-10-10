@@ -7,7 +7,18 @@ export function renderCalendar(empId = 'EMP-001') {
   grid.innerHTML = '';
   headers.forEach(header => grid.appendChild(header));
 
-  const empData = mockAttendanceData[empId] || mockAttendanceData['EMP-001'];
+  const empData = mockAttendanceData[empId];
+  if (!empData) {
+    ['present', 'late', 'absent', 'leave'].forEach(key => {
+      document.getElementById(`kpi-${key}`).textContent = '—';
+    });
+    document.getElementById('leave-balance-used').textContent = 'No records';
+    const message = document.createElement('p');
+    message.className = 'calendar-empty-state muted';
+    message.textContent = 'No attendance records available for this employee in October 2026.';
+    grid.appendChild(message);
+    return;
+  }
   document.getElementById('kpi-present').textContent = empData.kpis.present;
   document.getElementById('kpi-late').textContent = empData.kpis.late;
   document.getElementById('kpi-absent').textContent = empData.kpis.absent;

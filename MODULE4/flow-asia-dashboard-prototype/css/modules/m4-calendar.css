@@ -8,8 +8,8 @@
 .cell:hover { border-color: var(--g); transform: translateY(-2px); }
 .cell.empty { background-color: transparent; cursor: default; border: none; }
 .cell.empty:hover { transform: none; }
-.cell-num { font-weight: 700; font-size: 0.85rem; }
-.cell-tag { font-size: 0.65rem; font-weight: 800; padding: 2px 4px; border-radius: 4px; width: fit-content; max-width: 100%; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cell-num { font-weight: 700; font-size: 0.85rem; align-self: flex-start; color: var(--ink); }
+.cell-tag { font-size: 0.65rem; font-weight: 800; padding: 3px 5px; border-radius: 4px; width: fit-content; max-width: 100%; text-transform: uppercase; white-space: normal; overflow-wrap: anywhere; line-height: 1.35; text-align: center; align-self: center; margin-top: auto; }
 .cell.s-P { background-color: var(--card); border: 1px solid var(--line); }
 .cell.s-P .cell-tag { background: rgba(255,255,255,0.1); color: var(--ink); }
 .cell.s-L { background-color: var(--ink); color: var(--bg); border: 1px solid var(--ink); }
@@ -38,4 +38,21 @@
 .widget-box .btn { margin-top: 16px; width: 100%; }
 
 @media (max-width: 1100px) { .cal-layout { grid-template-columns: 1fr; } .widget-panel { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); } }
-@media (max-width: 520px) { .cal-container { padding: 14px; } .cal-grid { gap: 4px; } .cell { padding: 4px; aspect-ratio: 0.9; } .cell-tag { font-size: 0.48rem; padding: 2px; } .cal-header { align-items: flex-start; flex-direction: column; } }
+@media (max-width: 520px) { .cal-container { padding: 14px; } .cal-grid { gap: 4px; } .cell { padding: 4px; aspect-ratio: auto; min-height: 72px; gap: 6px; } .cell-tag { font-size: 0.55rem; padding: 2px 3px; } .cal-header { align-items: flex-start; flex-direction: column; } }
+
+/* Read-only inspection and additional backend statuses. */
+.cell.s-PL { background-color: var(--card); border: 2px dashed var(--info); }
+.cell.s-PL .cell-tag { background-color: var(--info); color: #000; }
+.cell.s-RD { background-color: var(--card); border: 1px solid var(--line); }
+.cell.s-RD .cell-tag { background-color: var(--soft); color: var(--ink-muted); }
+.cell.s-HD { background-color: var(--card); border: 1px solid var(--warning); }
+.cell.s-HD .cell-tag { background-color: var(--warning); color: #000; }
+.legend-present { background: var(--line); }
+.legend-late { background: var(--ink); }
+.legend-absent { background: var(--danger); }
+.legend-leave { background: var(--info); }
+.legend-invalid { background: var(--warning); }
+.legend-overtime, .legend-holiday { background: var(--g); }
+.read-only-badge { border: 1px solid var(--line); background: var(--card); color: var(--ink-muted); border-radius: 20px; padding: 5px 10px; font-size: 0.7rem; font-weight: 700; white-space: nowrap; }
+.calendar-empty-state { grid-column: 1 / -1; padding: 32px 12px; text-align: center; }
+#personal-quick-actions[hidden] { display: none; }
