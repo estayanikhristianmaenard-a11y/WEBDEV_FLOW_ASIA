@@ -21,6 +21,9 @@ class EmployeeCalendarController extends Controller
             'additional_statuses' => $row->additional_statuses ?? [],
             'late_minutes' => $row->late_minutes, 'ot_hours' => (float) $row->ot_hours,
             'pending_ot_hours' => (float) $row->pending_ot_hours,
+            'time_in' => $row->time_in,
+            'time_out' => $row->time_out,
+            'remarks' => $row->remarks,
         ])->values();
 
         return response()->json(['month' => $month, 'read_only' => true, 'data' => [

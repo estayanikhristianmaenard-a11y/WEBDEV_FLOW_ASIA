@@ -47,6 +47,8 @@ it('preserves secondary statuses, inclusive overlapping events and escaped event
     $data = app(CalendarPdfData::class)->build($employee, $user, '2026-10');
     $days = collect($data['weeks'])->flatten(1)->filter()->keyBy('day');
     expect($days[12]['codes'])->toBe(['H', 'AL']);
+    expect($data['summary']['leave_approved'])->toBe(4);
+    expect($data['summary']['holiday'])->toBe(4);
     expect($days[1]['events'])->toHaveCount(1);
     expect($days[2]['events'])->toHaveCount(1);
     expect($days[3]['events'])->toHaveCount(0);

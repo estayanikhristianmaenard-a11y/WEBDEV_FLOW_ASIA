@@ -20,13 +20,17 @@ class CalendarPdfData
         $events = CompanyEvent::query()->overlapping($from->toDateString(), $from->endOfMonth()->toDateString())
             ->orderBy('starts_on')->orderBy('id')->get();
         $statuses = config('calendar.statuses');
-        $statuses['invalid'] ??= ['label' => 'Invalid Punch', 'code' => 'INV', 'color' => '#FFB800'];
+        $statuses['invalid'] ??= config('calendar.invalid_status');
         $summary = array_fill_keys(array_keys($statuses), 0);
         $cells = array_fill(0, $from->dayOfWeek, null);
         for ($day = 1; $day <= $from->daysInMonth; $day++) {
             $date = $from->addDays($day - 1);
             $row = $rows->get($date->toDateString());
-            if ($row) $summary[$row->status] = ($summary[$row->status] ?? 0) + 1;
+            if ($row) {
+                foreach (array_unique([$row->status, ...($row->additional_statuses ?? [])]) as $status) {
+                    $summary[$status] = ($summary[$status] ?? 0) + 1;
+                }
+            }
             $codes = $row ? array_map(fn ($status) => $statuses[$status]['code'] ?? $status,
                 array_unique([$row->status, ...($row->additional_statuses ?? [])])) : [];
             $cells[] = [
@@ -34,7 +38,9 @@ class CalendarPdfData
                 'events' => $events->filter(fn ($event) => $event->starts_on->lte($date) && $event->ends_on->gte($date))->values(),
             ];
         }
-        while (count($cells) % 7 !== 0) $cells[] = null;
+        while (count($cells) % 7 !== 0) {
+            $cells[] = null;
+        }
 
         return compact('employee', 'generatedBy', 'statuses', 'summary') + [
             'monthTitle' => $from->format('F Y'), 'weeks' => array_chunk($cells, 7),

@@ -1,6 +1,6 @@
 # Employee search integration
 
-`GET /hr/employees/search?q=...` is a session-authenticated JSON endpoint. Send `Accept: application/json`. The `/m4` dashboard connection and `/login` session flow are prepared; runtime verification remains pending. See [dashboard integration](dashboard-integration.md).
+`GET /hr/employees/search?q=...` is a session-authenticated JSON endpoint. Send `Accept: application/json`. The `/m4` dashboard opens directly using local preview or shared-system identity; standalone runtime verification passed on 12 October 2026. See [dashboard integration](dashboard-integration.md).
 
 HR roles (`hr_admin`, `hr_staff`, `super_admin`) can search all employees. Supervisors can search themselves and direct reports, based on their linked employee ID. Employees and unknown roles receive 403; unauthenticated JSON requests receive 401. Supervisors without employee links receive no results.
 

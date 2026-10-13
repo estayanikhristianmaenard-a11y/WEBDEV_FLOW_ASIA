@@ -45,10 +45,7 @@ export async function initBackendDashboard() {
   status.setAttribute('role', 'status');
   document.querySelector('main').prepend(status);
   const switcher = $('role-toggle-btn').closest('.role-switcher-card');
-  switcher.replaceChildren(button('Sign out', async () => {
-    try { await request('/logout', { method: 'POST' }); location.href = '/login'; }
-    catch (error) { message(error.message); }
-  }));
+  switcher.remove();
   $('user-display-name').textContent = config.user.name;
   $('user-display-role').textContent = config.user.role.replaceAll('_', ' ');
   $('user-avatar').textContent = config.user.name.split(' ').map(part => part[0]).slice(0, 2).join('');
@@ -66,10 +63,23 @@ export async function initBackendDashboard() {
   const oldMonthButton = document.querySelector('.cal-header button');
   const monthInput = element('input', undefined, 'btn btn-secondary');
   monthInput.type = 'month'; monthInput.value = month;
+  monthInput.min = '0001-01'; monthInput.max = '9999-12';
   monthInput.setAttribute('aria-label', 'Calendar month');
-  oldMonthButton.replaceWith(monthInput);
+  const monthControls = element('div', undefined, 'calendar-month-controls');
+  function changeMonth(offset) {
+    const [year, number] = month.split('-').map(Number);
+    const total = year * 12 + number - 1 + offset;
+    const nextYear = Math.floor(total / 12);
+    if (nextYear < 1 || nextYear > 9999) return;
+    monthInput.value = `${String(nextYear).padStart(4, '0')}-${String(total % 12 + 1).padStart(2, '0')}`;
+    monthInput.dispatchEvent(new Event('change'));
+  }
+  monthControls.append(button('Previous', () => changeMonth(-1)), monthInput, button('Next', () => changeMonth(1)));
+  monthControls.firstElementChild.setAttribute('aria-label', 'Previous month');
+  monthControls.lastElementChild.setAttribute('aria-label', 'Next month');
+  oldMonthButton.replaceWith(monthControls);
   monthInput.addEventListener('change', () => {
-    if (!/^\d{4}-\d{2}$/.test(monthInput.value)) return;
+    if (!/^\d{4}-\d{2}$/.test(monthInput.value) || !monthInput.validity.valid) return;
     month = monthInput.value;
     refresh();
   });
@@ -270,10 +280,7 @@ function initSearch() {
   });
 }
 
-const statuses = {
-  present: ['P', 'Present'], late: ['L', 'Late'], absent: ['A', 'Absent'], leave_approved: ['LV', 'Leave'],
-  leave_pending: ['PL', 'Pending leave'], overtime: ['OT', 'Overtime'], holiday: ['H', 'Holiday'], rest_day: ['RD', 'Rest day'], half_day: ['HD', 'Half day'], invalid: ['INV', 'Invalid punch']
-};
+const statuses = Object.fromEntries(Object.entries(config.statuses).map(([key, status]) => [key, [status.ui_class, status.label]]));
 
 function renderCalendar() {
   const range = bounds(month);
@@ -314,9 +321,11 @@ function showDay(date, row, dayEvents) {
   $('modal-date-title').textContent = date;
   $('modal-status').textContent = statuses[row?.status]?.[1] || row?.status || 'No attendance record';
   for (const id of ['shift', 'time', 'hours']) $(`modal-${id}`).textContent = 'Not provided';
+  $('modal-time').textContent = row ? `${row.time_in || '—'} / ${row.time_out || '—'}` : '—';
   $('modal-late').textContent = row ? `${row.late_minutes} minutes` : '—';
   $('modal-ot').textContent = row ? `${row.ot_hours} approved hours · ${row.pending_ot_hours} pending` : '—';
   const box = $('modal-cr-box'); box.replaceChildren(element('p', 'Read-only attendance details.', 'muted'));
+  if (row?.remarks) box.append(element('p', `Remarks: ${row.remarks}`));
   if (row?.additional_statuses.length) box.append(element('p', `Additional statuses: ${row.additional_statuses.map(status => statuses[status]?.[1] || status).join(', ')}`));
   dayEvents.forEach(event => box.append(element('p', `◆ ${event.title}${event.extendedProps.description ? ` · ${event.extendedProps.description}` : ''}`)));
   $('day-modal').classList.add('open'); $('modal-close-btn').focus();

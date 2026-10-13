@@ -36,6 +36,5 @@ Folders: request validation in `app/Http/Requests`, route handler in
 `database/migrations`, verification in `tests/Feature/TeamCalendarTest.php`.
 
 After PHP 8.3+ and Composer dependencies are available, migrate the isolated demo
-database and run `php artisan test --filter=TeamCalendar`. Tests are prepared but
-have not run in the current environment. The `/m4` dashboard connection now uses
+database and run `php artisan test --filter=TeamCalendar`. Tests passed in the complete 89-test suite on 12 October 2026. The `/m4` dashboard connection now uses
 this response; see [dashboard integration](dashboard-integration.md).

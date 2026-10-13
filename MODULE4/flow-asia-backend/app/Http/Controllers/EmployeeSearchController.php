@@ -15,19 +15,20 @@ class EmployeeSearchController extends Controller
             ->select(['id', 'employee_no', 'first_name', 'last_name', 'position', 'department_id'])
             ->with('department:id,name');
 
-        // Every word must match; grouping keeps OR clauses inside the role scope.
-        foreach (explode(' ', $request->validated('q')) as $word) {
-            // Treat SQL wildcard characters as literal user input on MySQL and SQLite.
-            $pattern = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $word).'%';
-            $query->where(function (Builder $match) use ($pattern) {
-                $match->whereRaw("LOWER(first_name) LIKE LOWER(?) ESCAPE '!'", [$pattern])
-                    ->orWhereRaw("LOWER(last_name) LIKE LOWER(?) ESCAPE '!'", [$pattern])
-                    ->orWhereRaw("LOWER(employee_no) LIKE LOWER(?) ESCAPE '!'", [$pattern])
-                    ->orWhereHas('department', fn (Builder $department) =>
-                        $department->whereRaw("LOWER(name) LIKE LOWER(?) ESCAPE '!'", [$pattern])
-                    );
-            });
-        }
+        $term = $request->validated('q');
+        $patternFor = fn (string $value) => '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $value).'%';
+        $query->where(function (Builder $match) use ($term, $patternFor) {
+            $match->where(function (Builder $names) use ($term, $patternFor) {
+                foreach (explode(' ', $term) as $word) {
+                    $pattern = $patternFor($word);
+                    $names->where(fn (Builder $name) => $name
+                        ->whereRaw("LOWER(first_name) LIKE LOWER(?) ESCAPE '!'", [$pattern])
+                        ->orWhereRaw("LOWER(last_name) LIKE LOWER(?) ESCAPE '!'", [$pattern]));
+                }
+            })->orWhereRaw("LOWER(employee_no) LIKE LOWER(?) ESCAPE '!'", [$patternFor($term)])
+                ->orWhereHas('department', fn (Builder $department) => $department
+                    ->whereRaw("LOWER(name) LIKE LOWER(?) ESCAPE '!'", [$patternFor($term)]));
+        });
 
         $results = $query->orderBy('last_name')->orderBy('first_name')->orderBy('id')
             ->limit(config('calendar.search.limit'))->get()

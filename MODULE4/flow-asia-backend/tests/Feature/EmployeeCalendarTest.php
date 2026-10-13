@@ -12,7 +12,10 @@ it('loads only the requested employee and month without inventing records', func
     $user = User::where('email', 'employee@test.com')->firstOrFail();
     $this->actingAs($user)->getJson('/calendar/employees/'.$user->employee_id.'/month?month=2026-10')
         ->assertOk()->assertJsonPath('data.id', $user->employee_id)->assertJsonPath('read_only', true)
-        ->assertJsonCount(31, 'data.days');
+        ->assertJsonCount(31, 'data.days')
+        ->assertJsonPath('data.days.0.time_in', '09:15:00')
+        ->assertJsonPath('data.days.0.time_out', '18:00:00')
+        ->assertJsonPath('data.days.0.remarks', 'Demo data only.');
     $this->getJson('/calendar/employees/'.$user->employee_id.'/month?month=2026-09')
         ->assertOk()->assertJsonCount(0, 'data.days');
 });

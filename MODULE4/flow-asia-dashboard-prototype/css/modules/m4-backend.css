@@ -15,5 +15,7 @@
 #company-event-list .req-item { flex-wrap: wrap; gap: 6px; }
 .modal-card form, form.modal-card { display: flex; flex-direction: column; gap: 12px; }
 #backend-status:empty { display: none; }
+.calendar-month-controls { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.calendar-month-controls .btn { padding: 7px 10px; font-size: .75rem; }
 .mis-grid[hidden], .widget-box[hidden] { display: none !important; }
-@media print { #backend-status, #employee-search-results, #company-event-list button, .cal-header input { display: none; } }
+@media print { #backend-status, #employee-search-results, #company-event-list button, .calendar-month-controls { display: none; } }

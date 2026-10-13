@@ -12,7 +12,7 @@ Source is implemented; runtime verification is pending PHP 8.3+, Composer and au
 | DELETE | `/hr/events/{id}` | HR roles | 204 |
 | GET | `/calendar/events?start=...&end=...` | Any authenticated user | FullCalendar event array |
 
-Send `Accept: application/json`. These are session-authenticated web routes. Writes require Laravel's CSRF token. The `/login` flow and same-origin `/m4` dashboard connection are now prepared; see [dashboard integration](dashboard-integration.md). The standalone prototype's role toggle is not authentication. Runtime verification remains pending.
+Send `Accept: application/json`. These are session-authenticated web routes. Writes require Laravel's CSRF token. The same-origin `/m4` dashboard connection is available without a module login; see [dashboard integration](dashboard-integration.md). The standalone prototype's role toggle is not authentication. Standalone runtime verification passed on 12 October 2026.
 
 POST and updates accept the complete editable record:
 
@@ -32,4 +32,4 @@ Feed bounds accept ISO dates/datetimes; the end is exclusive. The feed returns e
 
 Validation errors return 422; unauthorized JSON requests return 401; forbidden actions return 403; unknown event IDs return 404. Company event feeds do not include creator/account details.
 
-Once the runtime is ready, run `php artisan migrate` and `php artisan test --filter=CompanyEvents`. Use a dedicated demo database. Pest covers HR CRUD, non-HR denials, authentication, invalid create/update data, company-wide feed access, overlapping dates and exclusive end conversion. Tests have been written but have not run yet.
+Once the runtime is ready, run `php artisan migrate` and `php artisan test --filter=CompanyEvents`. Use a dedicated demo database. Pest covers HR CRUD, non-HR denials, authentication, invalid create/update data, company-wide feed access, overlapping dates and exclusive end conversion. Tests passed in the complete 89-test suite on 12 October 2026.

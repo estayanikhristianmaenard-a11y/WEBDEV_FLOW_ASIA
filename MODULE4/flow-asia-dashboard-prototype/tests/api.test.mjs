@@ -19,9 +19,9 @@ test('writes include the session, CSRF token and JSON body', async () => {
   assert.deepEqual(JSON.parse(sent.options.body), { title: 'Town hall' });
 });
 
-test('successful delete and logout accept empty responses', async () => {
+test('successful event deletion accepts empty responses', async () => {
   globalThis.fetch = async () => ({ status: 204, ok: true });
-  assert.equal(await request('/logout', { method: 'POST' }), null);
+  assert.equal(await request('/hr/events/7', { method: 'DELETE' }), null);
 });
 
 test('validation messages reach the caller', async () => {
