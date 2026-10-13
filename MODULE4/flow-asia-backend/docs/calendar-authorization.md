@@ -1,6 +1,6 @@
 # Calendar authorization and read-only integration
 
-Source is verified locally: all 89 Laravel tests passed on PHP 8.4 with installed Composer dependencies. This step adds authorization infrastructure without implementing #09's calendar API or changing the frontend.
+Authorization is implemented and verified locally on PHP 8.4. Employee aggregation, team calendars, report viewing and PDF export use the same access rules. See SETUP.md for current suite results.
 
 `EmployeeCalendarPolicy::viewCalendar(User, Employee)` is registered for `Employee` in `AppServiceProvider`. HR roles can view anyone; employees can view their linked employee record; supervisors can view themselves and direct reports whose `supervisor_id` matches their employee ID (not user ID). Missing employee links and unknown roles are denied. Payroll Officers have no calendar permission in the agreed scope.
 
@@ -14,4 +14,4 @@ HR event writes remain under `/hr/events`, protected by authentication, the `man
 
 Run `php artisan test --filter=CalendarAuthorization` when dependencies are ready, then run the full feature suite. Tests cover HR/employee/supervisor access, team boundaries, missing identities, unknown roles, authentication, denied mutation abilities, rejected write methods before handlers execute and preserved HR event creation. Policy-isolation routes remain test-only; production individual-calendar, team and PDF routes are now available.
 
-Individual calendar, team and PDF routes now enforce policy checks. Module login/logout is removed; direct local preview is verified; shared-system integration remains pending. CR1 Invalid status and CR3 report metadata need coordination with #09/#10 based on the Change Request PDF.
+Individual calendar, team, report and PDF routes enforce policy checks. Report retrieval additionally requires that the report belongs to the selected employee, escapes text and sends private/no-store responses. Module login/logout is absent; local preview is verified. F075 Invalid and F076 report states are implemented against local adapters; main-system authentication and M3/M12 mapping still require integration.

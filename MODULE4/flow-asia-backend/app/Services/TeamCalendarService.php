@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Contracts\CalendarContextSource;
 use App\Contracts\CalendarDataSource;
 use App\Models\Employee;
 use App\Models\User;
@@ -10,7 +11,7 @@ use Illuminate\Support\Facades\Gate;
 
 class TeamCalendarService
 {
-    public function __construct(private CalendarDataSource $source) {}
+    public function __construct(private CalendarDataSource $source, private CalendarContextSource $context, private CalendarDayPresenter $presenter) {}
 
     public function build(User $user, string $month, ?int $departmentId): array
     {
@@ -27,6 +28,7 @@ class TeamCalendarService
 
         // A single batch includes the selected month and today's independent panel.
         $rows = $this->source->forEmployees($employees->modelKeys(), $from->min($today), $to->max($today));
+        $contexts = $this->context->forEmployees($employees->modelKeys(), $from->min($today), $to->max($today));
         $result = [];
         $todayGroups = ['absent' => [], 'late' => [], 'on_leave' => []];
         $pending = ['leave' => [], 'overtime' => []];
@@ -42,7 +44,8 @@ class TeamCalendarService
             $days = [];
             foreach ($rows->get($employee->id, collect()) as $row) {
                 $date = $row->date->toDateString();
-                $statuses = array_unique([$row->status, ...($row->additional_statuses ?? [])]);
+                $day = $this->presenter->present($row, $contexts->get($employee->id, [])['reports'][$date] ?? null);
+                $statuses = array_unique([$day['status'], ...$day['additional_statuses']]);
                 if ($date === $today->toDateString()) {
                     foreach (['absent' => 'absent', 'late' => 'late', 'on_leave' => 'leave_approved'] as $group => $status) {
                         if (in_array($status, $statuses, true)) {
@@ -53,12 +56,7 @@ class TeamCalendarService
                 if ($date < $from->toDateString() || $date > $to->toDateString()) {
                     continue;
                 }
-                $days[] = [
-                    'date' => $date, 'status' => $row->status,
-                    'additional_statuses' => $row->additional_statuses ?? [],
-                    'late_minutes' => $row->late_minutes, 'ot_hours' => (float) $row->ot_hours,
-                    'pending_ot_hours' => (float) $row->pending_ot_hours,
-                ];
+                $days[] = $day;
                 $entry = ['employee_id' => $employee->id, 'date' => $date];
                 if (in_array('leave_pending', $statuses, true)) {
                     $pending['leave'][] = $entry;

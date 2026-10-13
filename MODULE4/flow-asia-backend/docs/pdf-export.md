@@ -1,28 +1,25 @@
 # Calendar PDF export
 
-`GET /calendar/employees/{employee}/pdf?month=2026-10` returns an A4 landscape
-download. Session authentication and `viewCalendar` run before attendance reads
-or PDF rendering. Employees can export themselves, supervisors themselves/direct
-reports, and HR permitted employees. Responses are private and not cached.
+`GET /calendar/employees/{employee}/pdf?month=2026-10` downloads an A4 landscape
+calendar. Session authentication and `viewCalendar` precede reads/rendering.
+Employees export self; supervisors self/direct reports; HR permitted employees.
+Responses are private/no-store.
 
-The connected `/m4` Export PDF button exports the current selection (otherwise
-the signed-in employee) and selected month. It shows a preparing state and
-surfaces server errors. Standalone HTML retains its browser-print preview.
-The export includes identity, department, month grid, company events on inclusive
-stored dates, status code/color legend, status-membership counts, missing-record
-count and generated-by/time footer in Asia/Manila. Secondary statuses are retained.
-Missing records are not inferred. Final shared status aggregation belongs to #09.
+The connected Export PDF button uses the selected employee (otherwise self) and
+month, even in Week view. It shows preparation/errors. Direct HTML preview retains
+browser printing.
 
-The table-based Blade template uses local DejaVu Sans, no remote assets, and no
-embedded PHP execution. User text is escaped by Blade. Labels come from shared backend calendar configuration; PDF colors match the restored original dark-theme legend. Light-theme variants remain for readability. Many long company events can expand the PDF
-to additional pages; one page is not guaranteed.
+`CalendarPdfData` consumes `CalendarMonthService`, so priority, rejected Invalid
+punches, simultaneous statuses and summary counts match the screen/team feed.
+The export includes identity, department, month, company events, shared codes/
+colors, recorded/missing-day counts, total late minutes, approved OT/cutoff OT,
+legend and generated-by/time footer in Asia/Manila. Missing days are not inferred.
 
-`barryvdh/laravel-dompdf` ^3.1.2 is declared in composer.json. Its
-[official release notes](https://github.com/barryvdh/laravel-dompdf/releases)
-confirm Laravel 13 support. Once PHP 8.3+ and Composer are available, run
-`composer install`, then the setup/migrations and `php artisan test` including
-`CalendarPdfTest`. Composer dependencies are installed and locked in this environment.
+The Blade layout uses HTML tables and local DejaVu Sans, escaped text, no remote
+assets and no embedded PHP execution. Long event content may create extra pages.
+The original dark palette is preserved; screen light variants stay readable.
 
-All 89 Laravel tests and seven Node transport tests passed. Chrome verified PDF download and role restrictions. The generated one-page landscape PDF was rendered and visually reviewed on 12 October 2026. Shared-system integration remains pending.
-
-Screen/PDF summary rule: count each primary or additional status once per day. Overlapping categories may exceed recorded-day totals. No status priority is computed by the presenter.
+Run `php artisan test --filter=CalendarPdf` and
+`php artisan test --filter=CalendarAggregation`. Actual downloads and landscape
+PDF rendering have been checked locally; see [SETUP.md](../SETUP.md).
+Shared-source mapping and final group verification remain pending.

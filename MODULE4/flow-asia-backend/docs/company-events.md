@@ -1,6 +1,6 @@
 # Company Events backend integration
 
-Source is implemented; runtime verification is pending PHP 8.3+, Composer and authentication setup. The frontend has not been modified.
+CRUD, validation, the company-wide feed and dashboard controls are implemented and verified locally. Shared-system schema/authentication integration remains pending.
 
 ## Endpoints
 
@@ -32,4 +32,4 @@ Feed bounds accept ISO dates/datetimes; the end is exclusive. The feed returns e
 
 Validation errors return 422; unauthorized JSON requests return 401; forbidden actions return 403; unknown event IDs return 404. Company event feeds do not include creator/account details.
 
-Once the runtime is ready, run `php artisan migrate` and `php artisan test --filter=CompanyEvents`. Use a dedicated demo database. Pest covers HR CRUD, non-HR denials, authentication, invalid create/update data, company-wide feed access, overlapping dates and exclusive end conversion. Tests passed in the complete 89-test suite on 12 October 2026.
+After setup, run `php artisan migrate` and `php artisan test --filter=CompanyEvents`. Use a dedicated demo database. Pest covers HR CRUD, non-HR denials, authentication, invalid create/update data, company-wide feed access, overlapping dates and exclusive end conversion. Events also appear in the combined employee feed and team matrix. See SETUP.md for current verification results.

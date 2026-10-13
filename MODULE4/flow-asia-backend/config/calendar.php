@@ -6,7 +6,7 @@ return [
     'search' => ['min_length' => 2, 'max_length' => 100, 'limit' => 10],
     'read_only_paths' => ['calendar', 'calendar/*', 'hr/calendar', 'hr/calendar/*', 'hr/employees/*/calendar', 'hr/employees/*/calendar/*'],
     'event_types' => ['shoot' => 'Shoot', 'premiere' => 'Premiere', 'town_hall' => 'Town Hall', 'other' => 'Other'],
-    'priority' => ['holiday', 'leave_approved', 'absent', 'late'],
+    'priority' => ['holiday', 'leave_approved', 'invalid', 'absent', 'late', 'leave_pending', 'overtime', 'half_day', 'rest_day', 'present'],
     'statuses' => [
         'present' => ['label' => 'Present', 'color' => '#2A2A2E', 'code' => 'P', 'ui_class' => 'P'],
         'late' => ['label' => 'Late', 'color' => '#F4F4F5', 'code' => 'L', 'ui_class' => 'L'],
@@ -19,6 +19,7 @@ return [
         'half_day' => ['label' => 'Half-Day', 'color' => '#FFB800', 'code' => 'HD', 'ui_class' => 'HD'],
     ],
     'invalid_status' => ['label' => 'Invalid punch', 'color' => '#FFB800', 'code' => 'INV', 'ui_class' => 'INV'],
+    'unrecorded_status' => ['label' => 'No attendance status', 'color' => '#A1A1AA', 'code' => '—', 'ui_class' => 'RD'],
     'company_event' => ['class' => 'company-event', 'marker' => '◆'],
     'demo_month' => '2026-10',
 ];

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\CalendarPdfController;
+use App\Http\Controllers\CalendarReportController;
 use App\Http\Controllers\CompanyEventController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmployeeCalendarController;
@@ -23,6 +24,8 @@ Route::middleware([StandaloneModulePreview::class, 'auth'])->group(function () {
         ->middleware('can:viewCalendar,employee')->name('calendar.employee.month');
     Route::get('/calendar/employees/{employee}/pdf', CalendarPdfController::class)
         ->middleware('can:viewCalendar,employee')->name('calendar.employee.pdf');
+    Route::get('/calendar/employees/{employee}/reports/{report}', CalendarReportController::class)
+        ->whereNumber('report')->middleware('can:viewCalendar,employee')->name('calendar.employee.report');
     Route::middleware('can:manage-events')->prefix('hr')->name('hr.')->group(function () {
         Route::resource('events', CompanyEventController::class)->only(['index', 'store', 'update', 'destroy']);
     });

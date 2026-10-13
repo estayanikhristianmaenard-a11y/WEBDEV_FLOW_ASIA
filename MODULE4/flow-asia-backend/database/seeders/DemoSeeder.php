@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\AttendanceDaily;
+use App\Models\CalendarReport;
 use App\Models\Department;
 use App\Models\Employee;
 use App\Models\User;
@@ -39,6 +40,13 @@ class DemoSeeder extends Seeder
                             'department_id' => $department->id,
                             'supervisor_id' => $supervisorId,
                             'hired_on' => $number === 39 ? $month->addDays(14)->toDateString() : $month->subYear()->toDateString(),
+                            'calendar_profile' => [
+                                'leave_balances' => [['type' => 'Vacation', 'remaining_days' => 8], ['type' => 'Sick', 'remaining_days' => 10]],
+                                'pay_periods' => [
+                                    ['start' => '2026-10-01', 'end' => '2026-10-15', 'payday' => '2026-10-20'],
+                                    ['start' => '2026-10-16', 'end' => '2026-10-31', 'payday' => '2026-11-05'],
+                                ],
+                            ],
                         ],
                     );
                     $employees[$number] = $employee;
@@ -59,6 +67,20 @@ class DemoSeeder extends Seeder
                         if ($overlap) {
                             $status = 'holiday';
                         }
+                        if ($number === 3 && $day === 12) {
+                            $status = 'leave_approved';
+                        }
+                        $hasShift = in_array($status, ['present', 'late', 'overtime', 'half_day'], true);
+                        $rejectedPunch = $number === 2 && $day === 13;
+                        $details = [
+                            'report_required' => $hasShift,
+                            'shift' => $hasShift ? ['starts_at' => '09:00:00', 'ends_at' => $status === 'half_day' ? '13:00:00' : '18:00:00', 'break_minutes' => $status === 'half_day' ? 0 : 60, 'report_required' => true] : null,
+                            'leave' => in_array($status, ['leave_approved', 'leave_pending'], true) || $overlap
+                                ? ['type' => 'Vacation', 'approval_status' => $status === 'leave_pending' ? 'pending' : 'approved', 'days' => 1] : null,
+                            'holiday' => $status === 'holiday' ? ['name' => 'Demo company holiday'] : null,
+                            'punch_status' => $rejectedPunch ? 'rejected' : 'accepted',
+                            'correction' => $rejectedPunch ? ['status' => 'rejected', 'reason' => 'Demo: punch could not be verified.'] : null,
+                        ];
 
                         AttendanceDaily::updateOrCreate(
                             ['employee_id' => $employee->id, 'date' => $date->toDateString()],
@@ -66,13 +88,23 @@ class DemoSeeder extends Seeder
                                 'status' => $status,
                                 'additional_statuses' => $overlap ? ['leave_approved'] : [],
                                 'time_in' => in_array($status, ['present', 'late', 'overtime', 'half_day'], true) ? ($status === 'late' ? '09:15:00' : '09:00:00') : null,
-                                'time_out' => match ($status) { 'present', 'late' => '18:00:00', 'overtime' => '20:00:00', 'half_day' => '13:00:00', default => null },
+                                'time_out' => match ($status) {
+                                    'present', 'late' => '18:00:00', 'overtime' => '20:00:00', 'half_day' => '13:00:00', default => null
+                                },
                                 'late_minutes' => $status === 'late' ? 15 : 0,
                                 'ot_hours' => $status === 'overtime' ? 2 : 0,
                                 'pending_ot_hours' => $number === 2 && $day === 16 ? 2 : 0,
                                 'remarks' => $overlap ? 'Holiday and approved leave on the same day.' : 'Demo data only.',
+                                'calendar_details' => $details,
                             ],
                         );
+                        if ($hasShift && $day % 2 === 0) {
+                            CalendarReport::updateOrCreate(['employee_id' => $employee->id, 'date' => $date->toDateString()], [
+                                'title' => 'Daily progress · '.$date->toDateString(),
+                                'body' => 'Demo progress report. Completed scheduled work and shared the daily update.',
+                                'submitted_at' => $date->setTime(18, 0),
+                            ]);
+                        }
                     }
                 }
             }

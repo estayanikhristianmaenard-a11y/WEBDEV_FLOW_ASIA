@@ -12,10 +12,57 @@
 /* Keep attendance at the bottom when company events share the cell. */
 .cell .cell-tag { order: 2; }
 #team-indicators p { font-size: .85rem; line-height: 1.5; }
+#hr-requests-list { max-height: 320px; overflow-y: auto; }
 #company-event-list .req-item { flex-wrap: wrap; gap: 6px; }
 .modal-card form, form.modal-card { display: flex; flex-direction: column; gap: 12px; }
 #backend-status:empty { display: none; }
 .calendar-month-controls { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .calendar-month-controls .btn { padding: 7px 10px; font-size: .75rem; }
 .mis-grid[hidden], .widget-box[hidden] { display: none !important; }
+#team-calendar-card { min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+#team-calendar-card[hidden] { display: none; }
+#team-calendar-card .widget-title { margin-bottom: 0; }
+.team-calendar-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.team-calendar-controls select { max-width: 100%; }
+.team-calendar-scroll { max-width: 100%; overflow: auto; max-height: 560px; border: 1px solid var(--line); border-radius: var(--radius-sm); }
+.team-calendar-table { border-collapse: separate; border-spacing: 0; width: 100%; font-size: .75rem; }
+.team-calendar-table caption { text-align: left; padding: 12px; color: var(--ink-muted); }
+.team-calendar-table th, .team-calendar-table td { border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); text-align: center; vertical-align: top; }
+.team-calendar-table thead th { position: sticky; top: 0; background: var(--card); z-index: 2; padding: 8px; min-width: 68px; }
+.team-calendar-table .team-employee-heading { position: sticky; left: 0; background: var(--card); z-index: 1; min-width: 170px; max-width: 200px; padding: 10px; text-align: left; }
+.team-calendar-table thead .team-employee-heading { z-index: 3; }
+.team-calendar-table .team-today { box-shadow: inset 0 3px var(--g); }
+.team-weekday, .team-employee-meta { display: block; font-size: .65rem; color: var(--ink-muted); }
+.team-employee-link { border: 0; background: none; color: var(--ink); font: inherit; font-weight: 700; text-align: left; cursor: pointer; overflow-wrap: anywhere; }
+.team-employee-link:hover { text-decoration: underline; }
+.team-calendar-day { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 8px 4px; width: 100%; min-height: 60px; border: 0; background: transparent; color: var(--ink); font: inherit; cursor: pointer; }
+.team-calendar-day:hover { background: var(--soft); }
+.team-calendar-day:focus-visible, .team-employee-link:focus-visible, .team-calendar-scroll:focus-visible { outline: 2px solid var(--g); outline-offset: -2px; }
+.team-status { padding: 2px 5px; border-radius: 4px; font-size: .65rem; font-weight: 800; background: var(--soft); color: var(--ink); }
+.team-status-L { background: var(--ink); color: var(--bg); }
+.team-status-A { background: var(--danger); color: #000; }
+.team-status-LV, .team-status-PL { background: var(--info); color: #000; }
+[data-theme="light"] .team-status-LV, [data-theme="light"] .team-status-PL { color: #fff; }
+.team-status-PL { background-image: repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(0,0,0,.2) 3px, rgba(0,0,0,.2) 6px); }
+.team-status-OT, .team-status-H { background: var(--g); color: #000; }
+.team-status-INV, .team-status-HD { background: var(--warning); color: #000; }
+.team-status-RD { color: var(--ink-muted); }
+.team-leave-overlap { box-shadow: inset 0 -3px var(--warning); }
+.team-overlap-marker, .team-pending-ot { font-size: .6rem; color: var(--ink); }
+.calendar-secondary-status, .calendar-report-marker { font-size: .6rem; color: var(--ink); overflow-wrap: anywhere; }
+.calendar-short-label { display: none; }
+.cell.s-L .calendar-secondary-status, .cell.s-L .calendar-report-marker { color: var(--bg); }
+.widget-box h2:not(:first-child) { margin-top: 20px; }
+@media (max-width: 520px) {
+  #staff-calendar-grid .calendar-full-label { display: none; }
+  #staff-calendar-grid .calendar-short-label { display: inline; }
+  #staff-calendar-grid .cell-tag { white-space: nowrap; }
+  .dashboard-view .g4 { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .dashboard-view .card-kpi { padding: 12px; }
+  .dashboard-view .kpi-num { font-size: 1.5rem; }
+  .dashboard-view .kpi-label, .dashboard-view .kpi-subtext { font-size: .65rem; }
+  #modal-cr-box { grid-column: 1 / -1; }
+  .team-calendar-table .team-employee-heading { min-width: 120px; max-width: 120px; padding: 8px; }
+  .team-calendar-controls .btn { padding: 8px; font-size: .7rem; }
+}
 @media print { #backend-status, #employee-search-results, #company-event-list button, .calendar-month-controls { display: none; } }

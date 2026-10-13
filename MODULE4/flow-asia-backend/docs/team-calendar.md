@@ -1,40 +1,34 @@
-# Team and department calendar backend
+# Team and department calendar
 
-Prepared endpoint: `GET /hr/calendar/team?month=2026-10&department_id=1`.
-Use an authenticated session and `Accept: application/json`. `month` is required
-(`YYYY-MM`); `department_id` is optional and must exist.
+`GET /hr/calendar/team?month=2026-10&department_id=1` requires authentication,
+`Accept: application/json` and a valid `YYYY-MM` month. Department is optional.
 
-HR roles can read all employees or filter by department. Supervisors can read
-themselves and direct reports only. Filtering by another department returns an
-empty authorized roster. Employees and unknown roles cannot use this endpoint.
-Every selected employee also passes `viewCalendar` authorization before reading.
+HR reads all employees; supervisors only self/direct reports. A filter for another
+department returns an empty permitted roster. Employees/unknown roles are denied.
+Each selected employee passes `viewCalendar` before any calendar source read.
+Responses are private/no-store.
 
-The response includes:
+The response includes permitted `employees` with days, independent Manila `today`
+absent/late/on-leave lists, `leave_overlaps` within the same department, and
+`pending.leave`/`pending.overtime` employee/date indicators.
 
-- `month`, `read_only`, and `employees`: safe identities and recorded days in the selected month.
-- `today`: Manila date and absent, late, and approved-leave employee lists, independent of selected month.
-- `leave_overlaps`: dates with two or more approved leaves within the same department and authorized roster.
-- `pending.leave`: employee/date indicators for pending leave within the selected month.
-- `pending.overtime`: employee/date/hours indicators for pending OT within the selected month.
+Attendance and context are read in batches spanning the month and today.
+The 240-employee regression enforces one attendance query, one report query and
+bounded total queries. No per-employee attendance/report requests are made.
+`CalendarDayPresenter` applies the same priority, Invalid and detail semantics as
+the individual feed/PDF. Missing records remain unrecorded.
 
-Attendance is loaded through one `CalendarDataSource::forEmployees` call, using
-an inclusive range spanning the selected month and today. No per-employee
-attendance queries are made. Empty days stay empty; missing punches are not
-inferred as Present. Primary and additional statuses are preserved. Today's
-groups show membership in the recorded statuses, so an employee may appear in
-multiple groups. Display priority and FullCalendar event conversion remain #09's
-responsibility. Company events use the existing separate `/calendar/events` feed.
+The connected matrix shows employee rows against month dates with text codes,
+secondary statuses, approved overlap markers, pending OT and company events.
+Department filtering uses the permitted response. Row/day selection loads the
+authorized individual feed and details. Month controls synchronize; the matrix
+scrolls inside its container on small screens. Employee accounts have no team UI.
 
-`pending_ot_hours` is local stub metadata, added through migration 000003.
-It represents requested hours, separate from approved `ot_hours`. This endpoint
-does not create or approve requests. Replace this storage with your team's leave
-and overtime request sources when integrating the shared ERD. Indicators are
-daily records, not counts of distinct request IDs or request date ranges.
+`pending_ot_hours` and JSON context are local source metadata. Indicators are
+daily records rather than distinct request IDs. M4 cannot create/approve requests.
+Replace the adapters with shared leave/OT records during integration.
 
-Folders: request validation in `app/Http/Requests`, route handler in
-`app/Http/Controllers`, aggregation in `app/Services`, storage changes in
-`database/migrations`, verification in `tests/Feature/TeamCalendarTest.php`.
-
-After PHP 8.3+ and Composer dependencies are available, migrate the isolated demo
-database and run `php artisan test --filter=TeamCalendar`. Tests passed in the complete 89-test suite on 12 October 2026. The `/m4` dashboard connection now uses
-this response; see [dashboard integration](dashboard-integration.md).
+Run `php artisan test --filter=TeamCalendar` and
+`php artisan test --filter=CalendarAggregation` after setup. Frontend regressions:
+`node --test ../flow-asia-dashboard-prototype/tests/*.test.mjs`.
+See [dashboard](dashboard-integration.md) and [SETUP.md](../SETUP.md).

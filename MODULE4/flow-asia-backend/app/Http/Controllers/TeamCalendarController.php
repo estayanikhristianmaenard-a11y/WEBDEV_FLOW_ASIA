@@ -14,6 +14,6 @@ class TeamCalendarController extends Controller
 
         return response()->json($service->build(
             $request->user(), $input['month'], isset($input['department_id']) ? (int) $input['department_id'] : null,
-        ));
+        ))->header('Cache-Control', 'private, no-store');
     }
 }

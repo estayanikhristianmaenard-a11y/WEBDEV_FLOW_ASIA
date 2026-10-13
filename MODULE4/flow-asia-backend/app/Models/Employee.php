@@ -2,18 +2,18 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Employee extends Model
 {
-    protected $fillable = ['employee_no', 'first_name', 'last_name', 'position', 'department_id', 'supervisor_id', 'hired_on'];
+    protected $fillable = ['employee_no', 'first_name', 'last_name', 'position', 'department_id', 'supervisor_id', 'hired_on', 'calendar_profile'];
 
     protected function casts(): array
     {
-        return ['hired_on' => 'date'];
+        return ['hired_on' => 'date', 'calendar_profile' => 'array'];
     }
 
     public function department(): BelongsTo

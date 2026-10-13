@@ -2,6 +2,14 @@
 
 namespace App\Providers;
 
+use App\Contracts\CalendarContextSource;
+use App\Contracts\CalendarDataSource;
+use App\Models\Employee;
+use App\Models\User;
+use App\Policies\EmployeeCalendarPolicy;
+use App\Services\StubCalendarContextSource;
+use App\Services\StubCalendarDataSource;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -11,7 +19,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->bind(\App\Contracts\CalendarDataSource::class, \App\Services\StubCalendarDataSource::class);
+        $this->app->bind(CalendarDataSource::class, StubCalendarDataSource::class);
+        $this->app->bind(CalendarContextSource::class, StubCalendarContextSource::class);
     }
 
     /**
@@ -19,9 +28,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        \Illuminate\Support\Facades\Gate::policy(\App\Models\Employee::class, \App\Policies\EmployeeCalendarPolicy::class);
-        \Illuminate\Support\Facades\Gate::define('manage-events', fn (\App\Models\User $user): bool =>
-            in_array($user->role, config('calendar.hr_roles'), true)
+        Gate::policy(Employee::class, EmployeeCalendarPolicy::class);
+        Gate::define('manage-events', fn (User $user): bool => in_array($user->role, config('calendar.hr_roles'), true)
         );
     }
 }

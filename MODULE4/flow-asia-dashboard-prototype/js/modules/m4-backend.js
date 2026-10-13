@@ -1,4 +1,5 @@
 import { request } from '../core/api.js';
+import { calendarDates, renderTeamCalendar, renderTeamLegend } from './m4-team-calendar.js';
 
 const config = window.flowAsiaBackend;
 const canManage = config.hrRoles.includes(config.user.role);
@@ -15,6 +16,9 @@ let searchVersion = 0;
 let searchAbort;
 let results = [];
 let activeResult = -1;
+let searchTimer;
+let calendarView = 'month';
+let calendarWeek = 0;
 const $ = id => document.getElementById(id);
 
 function element(tag, text, className) {
@@ -31,12 +35,6 @@ function button(text, action, className = 'btn btn-secondary') {
   return node;
 }
 
-function bounds(value) {
-  const [year, number] = value.split('-').map(Number);
-  const next = new Date(Date.UTC(year, number, 1)).toISOString().slice(0, 10);
-  return { start: `${value}-01`, end: next, year, number };
-}
-
 function message(text) { $('backend-status').textContent = text; }
 
 export async function initBackendDashboard() {
@@ -51,21 +49,34 @@ export async function initBackendDashboard() {
   $('user-avatar').textContent = config.user.name.split(' ').map(part => part[0]).slice(0, 2).join('');
   $('role-badge').textContent = canManage ? 'HR VIEW' : canInspect ? 'SUPERVISOR VIEW' : 'STAFF VIEW';
   $('header-dashboard-title').textContent = canInspect ? 'Calendar Management Dashboard' : 'Schedule Dashboard';
-  $('header-dashboard-sub').textContent = canInspect ? 'Employee calendars, team indicators and company events' : 'Company events and schedule';
+  $('header-dashboard-sub').textContent = canInspect ? 'Employee calendars, team calendar and company events' : 'Company events and schedule';
   $('hr-dashboard-view').classList.toggle('hidden', !canInspect);
   $('personal-quick-actions').hidden = true;
   document.querySelector('.mis-grid').hidden = true;
-  document.querySelector('.widget-panel .widget-box').hidden = true;
+  document.querySelector('.widget-panel .widget-box').hidden = false;
   $('export-pdf-btn').textContent = 'Export PDF';
   $('export-pdf-btn').addEventListener('click', exportPdf);
   document.querySelectorAll('#staff-dashboard-view .card-kpi .kpi-subtext').forEach(node => { node.textContent = 'Recorded days in selected month'; });
+  const personalLegend = document.querySelector('.cal-container .lg');
+  personalLegend.replaceChildren();
+  Object.values(config.statuses).forEach(status => {
+    const item = element('span', undefined, 'lg-item');
+    item.append(element('span', status.code, `team-status team-status-${status.ui_class}`), element('span', status.label));
+    personalLegend.append(item);
+  });
+  personalLegend.append(element('span', '— No record', 'lg-item'), element('span', '◆ Company event', 'lg-item'), element('span', 'R Report submitted', 'lg-item'));
 
   const oldMonthButton = document.querySelector('.cal-header button');
   const monthInput = element('input', undefined, 'btn btn-secondary');
+  monthInput.id = 'employee-calendar-month';
   monthInput.type = 'month'; monthInput.value = month;
   monthInput.min = '0001-01'; monthInput.max = '9999-12';
   monthInput.setAttribute('aria-label', 'Calendar month');
   const monthControls = element('div', undefined, 'calendar-month-controls');
+  const viewMode = element('select', undefined, 'btn btn-secondary');
+  viewMode.id = 'employee-calendar-view'; viewMode.setAttribute('aria-label', 'Calendar view');
+  viewMode.append(new Option('Month', 'month'), new Option('Week', 'week'));
+  viewMode.addEventListener('change', () => { calendarView = viewMode.value; calendarWeek = 0; renderCalendar(); });
   function changeMonth(offset) {
     const [year, number] = month.split('-').map(Number);
     const total = year * 12 + number - 1 + offset;
@@ -74,32 +85,75 @@ export async function initBackendDashboard() {
     monthInput.value = `${String(nextYear).padStart(4, '0')}-${String(total % 12 + 1).padStart(2, '0')}`;
     monthInput.dispatchEvent(new Event('change'));
   }
-  monthControls.append(button('Previous', () => changeMonth(-1)), monthInput, button('Next', () => changeMonth(1)));
-  monthControls.firstElementChild.setAttribute('aria-label', 'Previous month');
-  monthControls.lastElementChild.setAttribute('aria-label', 'Next month');
+  function changePeriod(offset) {
+    if (calendarView === 'week') {
+      const offsetDays = new Date(`${month}-01T00:00:00Z`).getUTCDay();
+      const weeks = Math.ceil((offsetDays + calendarDates(month).length) / 7);
+      const nextWeek = calendarWeek + offset;
+      if (nextWeek >= 0 && nextWeek < weeks) { calendarWeek = nextWeek; renderCalendar(); return; }
+      changeMonth(offset);
+      calendarWeek = offset < 0 ? -1 : 0;
+      return;
+    }
+    changeMonth(offset);
+  }
+  const previousPeriod = button('Previous', () => changePeriod(-1)); previousPeriod.setAttribute('aria-label', 'Previous calendar period');
+  const nextPeriod = button('Next', () => changePeriod(1)); nextPeriod.setAttribute('aria-label', 'Next calendar period');
+  monthControls.append(previousPeriod, monthInput, nextPeriod, viewMode);
   oldMonthButton.replaceWith(monthControls);
   monthInput.addEventListener('change', () => {
     if (!/^\d{4}-\d{2}$/.test(monthInput.value) || !monthInput.validity.valid) return;
     month = monthInput.value;
+    calendarWeek = 0;
+    if ($('team-calendar-month')) $('team-calendar-month').value = month;
     refresh();
   });
 
   const teamCard = element('section', undefined, 'card');
-  teamCard.append(element('h2', 'Team / department', 'widget-title'));
+  teamCard.id = 'team-calendar-card';
+  teamCard.hidden = !canInspect;
+  teamCard.append(element('h2', 'Team / department calendar', 'widget-title'));
+  const teamControls = element('div', undefined, 'team-calendar-controls');
   const department = element('select', undefined, 'btn btn-secondary');
   department.id = 'team-department';
   department.setAttribute('aria-label', 'Filter department');
   department.append(new Option('All permitted departments', ''));
   department.addEventListener('change', renderTeam);
+  const teamMonth = element('input', undefined, 'btn btn-secondary');
+  teamMonth.id = 'team-calendar-month'; teamMonth.type = 'month'; teamMonth.value = month;
+  teamMonth.min = monthInput.min; teamMonth.max = monthInput.max;
+  teamMonth.setAttribute('aria-label', 'Team calendar month');
+  teamMonth.addEventListener('change', () => {
+    monthInput.value = teamMonth.value;
+    monthInput.dispatchEvent(new Event('change'));
+  });
+  const previousTeamMonth = button('Previous', () => changeMonth(-1));
+  previousTeamMonth.setAttribute('aria-label', 'Previous team month');
+  const nextTeamMonth = button('Next', () => changeMonth(1));
+  nextTeamMonth.setAttribute('aria-label', 'Next team month');
+  teamControls.append(department, previousTeamMonth, teamMonth, nextTeamMonth);
+  const calendar = element('div', undefined, 'team-calendar-scroll'); calendar.id = 'team-calendar';
+  calendar.tabIndex = 0; calendar.setAttribute('role', 'region'); calendar.setAttribute('aria-label', 'Read-only team attendance calendar');
+  const legend = element('div', undefined, 'lg'); legend.id = 'team-calendar-legend';
+  legend.setAttribute('aria-label', 'Team calendar status legend');
+  renderTeamLegend(legend, config.statuses);
   const indicators = element('div'); indicators.id = 'team-indicators';
-  teamCard.append(department, indicators);
-  $('hr-dashboard-view').insertBefore(teamCard, document.querySelector('.mis-grid'));
+  teamCard.append(teamControls, element('p', 'Select an employee or day to inspect their read-only calendar. Scroll across to see every date.', 'muted'), calendar, legend, indicators);
+  $('hr-dashboard-view').insertBefore(teamCard, $('hr-requests-list').closest('.card'));
   document.querySelector('#hr-requests-list').previousElementSibling.textContent = 'Pending leave / OT · Read-only';
   const eventCard = element('section', undefined, 'widget-box');
   eventCard.append(element('h2', 'Company events', 'widget-title'));
   if (canManage) eventCard.append(button('Create event', () => editEvent(), 'btn btn-primary'));
   const list = element('div'); list.id = 'company-event-list'; eventCard.append(list);
   document.querySelector('.widget-panel').append(eventCard);
+  const summaryCards = document.querySelector('#staff-dashboard-view .g4');
+  for (const [id, label] of [['late-minutes', 'Total late minutes'], ['cutoff-ot', 'OT hours this cutoff']]) {
+    const card = element('article', undefined, 'card card-kpi');
+    const value = element('span', '—', 'kpi-num'); value.id = `kpi-${id}`;
+    card.append(value, element('span', label, 'kpi-label'), element('span', 'From calendar source records', 'kpi-subtext'));
+    summaryCards.append(card);
+  }
+  document.querySelector('#kpi-leave + .kpi-label').textContent = 'Leave days used';
   initSearch();
   $('clear-inspection-btn').addEventListener('click', () => {
     selectedId = null; $('hr-search-input').value = ''; loadEmployeeCalendar().catch(() => {});
@@ -113,20 +167,19 @@ async function refresh() {
   team = null; events = [];
   renderCalendar();
   if (canInspect) {
+    $('team-calendar').textContent = 'Loading team calendar…';
+    $('team-calendar').setAttribute('aria-busy', 'true');
     $('team-indicators').textContent = 'Loading team…'; $('hr-requests-list').replaceChildren();
     document.querySelectorAll('#hr-dashboard-view .kpi-num').forEach(node => { node.textContent = '—'; });
   }
   $('company-event-list').textContent = 'Loading events…';
   message('Loading calendar…');
-  const range = bounds(selectedMonth);
   const responses = await Promise.allSettled([
     canInspect ? request(`/hr/calendar/team?month=${selectedMonth}`) : Promise.resolve(null),
-    request(`/calendar/events?start=${range.start}&end=${range.end}`),
     loadEmployeeCalendar()
   ]);
   if (version !== loadVersion) return;
   team = responses[0].status === 'fulfilled' ? responses[0].value : null;
-  events = responses[1].status === 'fulfilled' ? responses[1].value : [];
   if (team) {
     const filter = $('team-department');
     const previous = filter.value;
@@ -136,7 +189,7 @@ async function refresh() {
     filter.value = [...filter.options].some(option => option.value === previous) ? previous : '';
   }
   renderTeam(); renderCalendar(); renderEvents();
-  const errors = responses.slice(0, 2).filter(response => response.status === 'rejected').map(response => response.reason.message);
+  const errors = responses.filter(response => response.status === 'rejected').map(response => response.reason.message);
   if (employeeLoadError) errors.push(employeeLoadError);
   message(errors.join(' ') || (canInspect
     ? 'Calendar loaded. Employee attendance, leave and OT are read-only.'
@@ -166,13 +219,18 @@ async function loadEmployeeCalendar() {
   employeeCalendar = null; employeeLoadError = ''; renderCalendar();
   if (!employeeId) {
     employeeLoadError = 'No employee profile is linked to this account. Select an employee to view their calendar.';
-    message(employeeLoadError); return;
+    const exclusiveEnd = new Date(`${requestedMonth}-01T00:00:00Z`);
+    exclusiveEnd.setUTCMonth(exclusiveEnd.getUTCMonth() + 1);
+    const response = await request(`/calendar/events?start=${requestedMonth}-01&end=${exclusiveEnd.toISOString().slice(0, 10)}`);
+    if (version !== employeeLoadVersion) return;
+    events = response; renderTeam(); renderEvents(); message(employeeLoadError); return;
   }
   message('Loading employee calendar…');
   try {
     const response = await request(`/calendar/employees/${employeeId}/month?month=${requestedMonth}`);
     if (version !== employeeLoadVersion) return;
-    employeeCalendar = response.data; renderCalendar(); message('Employee calendar loaded. Read-only.');
+    employeeCalendar = response.data; events = response.data.company_events || [];
+    renderCalendar(); renderTeam(); renderEvents(); message('Employee calendar loaded. Read-only.');
   } catch (error) {
     if (version === employeeLoadVersion) { employeeLoadError = error.message; message(error.message); throw error; }
   }
@@ -180,8 +238,14 @@ async function loadEmployeeCalendar() {
 
 function renderTeam() {
   if (!canInspect) return;
-  if (!team) { $('team-indicators').textContent = 'Team data unavailable.'; $('hr-pending-count').textContent = '—'; return; }
+  $('team-calendar').setAttribute('aria-busy', 'false');
+  if (!team) {
+    $('team-calendar').textContent = 'Team calendar unavailable. Choose a month to retry.';
+    $('team-indicators').textContent = 'Team data unavailable.';
+    $('hr-requests-list').replaceChildren(); $('hr-pending-count').textContent = '—'; return;
+  }
   const departmentId = $('team-department').value;
+  renderTeamCalendar($('team-calendar'), { team, events, month, departmentId, statuses: config.statuses, onInspect: inspectTeamEmployee });
   const employees = team.employees.filter(employee => !departmentId || String(employee.department?.id) === departmentId);
   const ids = new Set(employees.map(employee => employee.id));
   const node = $('team-indicators'); node.replaceChildren();
@@ -214,6 +278,26 @@ function renderTeam() {
   });
 }
 
+async function inspectTeamEmployee(employee, date) {
+  selectedId = employee.id;
+  $('hr-search-input').value = employee.name;
+  ++searchVersion; searchAbort?.abort(); clearTimeout(searchTimer); results = []; activeResult = -1;
+  $('employee-search-results').replaceChildren();
+  $('hr-search-input').setAttribute('aria-expanded', 'false');
+  $('hr-search-input').removeAttribute('aria-activedescendant');
+  const requestedMonth = month;
+  const requestedVersion = employeeLoadVersion + 1;
+  try {
+    await loadEmployeeCalendar();
+    if (requestedVersion !== employeeLoadVersion || selectedId !== employee.id || requestedMonth !== month || !employeeCalendar) return;
+    if (date) {
+      showDay(date, employeeCalendar.days.find(day => day.date === date), events.filter(event => event.start <= date && event.end > date));
+    } else {
+      $('calendar-inspection-header').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  } catch (error) { message(error.message); }
+}
+
 function initSearch() {
   const input = $('hr-search-input');
   input.placeholder = 'Search name, ID or department';
@@ -222,7 +306,6 @@ function initSearch() {
   input.setAttribute('aria-controls', 'employee-search-results'); input.setAttribute('aria-expanded', 'false');
   const list = element('div'); list.id = 'employee-search-results'; list.setAttribute('role', 'listbox');
   input.closest('.hr-search-bar').after(list);
-  let timer;
   async function search() {
     const version = ++searchVersion;
     searchAbort?.abort(); searchAbort = new AbortController();
@@ -248,23 +331,23 @@ function initSearch() {
   }
   function select(person) {
     selectedId = person.id; input.value = person.name; results = [];
-    ++searchVersion; searchAbort?.abort(); clearTimeout(timer);
+    ++searchVersion; searchAbort?.abort(); clearTimeout(searchTimer);
     list.replaceChildren(); input.setAttribute('aria-expanded', 'false'); input.removeAttribute('aria-activedescendant');
     loadEmployeeCalendar().catch(() => {});
   }
   input.addEventListener('input', () => {
-    ++searchVersion; searchAbort?.abort(); clearTimeout(timer);
+    ++searchVersion; searchAbort?.abort(); clearTimeout(searchTimer);
     results = []; activeResult = -1; list.replaceChildren();
     input.setAttribute('aria-expanded', 'false'); input.removeAttribute('aria-activedescendant');
-    timer = setTimeout(search, 275);
+    searchTimer = setTimeout(search, 275);
   });
-  $('hr-search-btn').addEventListener('click', () => { clearTimeout(timer); search(); });
+  $('hr-search-btn').addEventListener('click', () => { clearTimeout(searchTimer); search(); });
   $('clear-inspection-btn').addEventListener('click', () => {
-    ++searchVersion; searchAbort?.abort(); clearTimeout(timer); results = []; activeResult = -1;
+    ++searchVersion; searchAbort?.abort(); clearTimeout(searchTimer); results = []; activeResult = -1;
     list.replaceChildren(); input.setAttribute('aria-expanded', 'false'); input.removeAttribute('aria-activedescendant');
   });
   input.addEventListener('keydown', event => {
-    if (event.key === 'Escape') { ++searchVersion; searchAbort?.abort(); clearTimeout(timer); list.replaceChildren(); results = []; input.setAttribute('aria-expanded', 'false'); input.removeAttribute('aria-activedescendant'); }
+    if (event.key === 'Escape') { ++searchVersion; searchAbort?.abort(); clearTimeout(searchTimer); list.replaceChildren(); results = []; input.setAttribute('aria-expanded', 'false'); input.removeAttribute('aria-activedescendant'); }
     if (['ArrowDown', 'ArrowUp'].includes(event.key) && results.length) {
       event.preventDefault();
       activeResult = activeResult < 0 ? (event.key === 'ArrowDown' ? 0 : results.length - 1)
@@ -275,7 +358,7 @@ function initSearch() {
     }
     if (event.key === 'Enter') {
       event.preventDefault();
-      if (activeResult >= 0 && results[activeResult]) select(results[activeResult]); else { clearTimeout(timer); search(); }
+      if (activeResult >= 0 && results[activeResult]) select(results[activeResult]); else { clearTimeout(searchTimer); search(); }
     }
   });
 }
@@ -283,8 +366,13 @@ function initSearch() {
 const statuses = Object.fromEntries(Object.entries(config.statuses).map(([key, status]) => [key, [status.ui_class, status.label]]));
 
 function renderCalendar() {
-  const range = bounds(month);
-  const title = new Date(range.year, range.number - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const allDates = calendarDates(month);
+  const offset = new Date(`${month}-01T00:00:00Z`).getUTCDay();
+  const weeks = Math.ceil((offset + allDates.length) / 7);
+  calendarWeek = calendarWeek < 0 ? weeks - 1 : Math.min(calendarWeek, weeks - 1);
+  const weekDates = Array.from({ length: 7 }, (_, index) => allDates[calendarWeek * 7 + index - offset] || null);
+  const title = new Date(`${month}-01T00:00:00Z`).toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+    + (calendarView === 'week' ? ` · Week ${calendarWeek + 1}` : '');
   document.querySelector('.cal-month-title').textContent = title;
   const grid = $('staff-calendar-grid');
   grid.setAttribute('aria-label', title);
@@ -299,36 +387,81 @@ function renderCalendar() {
   $('calendar-employee-meta').textContent = employee ? `${employee.employee_no} · ${employee.department?.name || ''} · ${employee.position || ''}` : '';
   const days = employee?.days || [];
   for (const [id, status] of [['present', 'present'], ['late', 'late'], ['absent', 'absent'], ['leave', 'leave_approved']]) {
-    $(`kpi-${id}`).textContent = employee ? days.filter(day => day.status === status || day.additional_statuses.includes(status)).length : '—';
+    $(`kpi-${id}`).textContent = employee ? (id === 'leave' ? employee.summary.leave_days_used : employee.summary.status_counts[status]) : '—';
   }
-  const offset = new Date(range.year, range.number - 1, 1).getDay();
-  for (let i = 0; i < offset; i++) grid.append(element('div', undefined, 'cell empty'));
-  const count = new Date(range.year, range.number, 0).getDate();
-  for (let number = 1; number <= count; number++) {
-    const date = `${month}-${String(number).padStart(2, '0')}`;
+  $('kpi-late-minutes').textContent = employee?.summary.late_minutes ?? '—';
+  $('kpi-cutoff-ot').textContent = employee?.summary.cutoff_ot_hours ?? '—';
+  $('kpi-cutoff-ot').closest('.card').querySelector('.kpi-subtext').textContent = employee?.cutoff ? `${employee.cutoff.start} – ${employee.cutoff.end}` : 'Pay period unavailable';
+  renderEmployeeWidgets(employee);
+  const displayDates = calendarView === 'week' ? weekDates : [...Array(offset).fill(null), ...allDates];
+  for (const date of displayDates) {
+    if (!date) { grid.append(element('div', undefined, 'cell empty')); continue; }
+    const number = Number(date.slice(-2));
     const row = days.find(day => day.date === date);
     const status = statuses[row?.status] || ['', row?.status || (employee ? 'No record' : 'Not loaded')];
     const dayEvents = events.filter(event => event.start <= date && event.end > date);
     const cell = button('', () => showDay(date, row, dayEvents), `cell${status[0] ? ` s-${status[0]}` : ''}`);
-    cell.setAttribute('role', 'gridcell'); cell.setAttribute('aria-label', `${date}: ${status[1]}${dayEvents.length ? `, ${dayEvents.length} company events` : ''}`);
-    cell.append(element('span', String(number), 'cell-num'), element('span', status[1].toUpperCase(), 'cell-tag'));
-    dayEvents.forEach(event => cell.append(element('span', `◆ ${event.title}`, 'company-event-marker')));
+    cell.setAttribute('role', 'gridcell'); cell.setAttribute('aria-label', `${date}: ${status[1]}${dayEvents.length ? `, ${dayEvents.length} company events` : ''}${row?.report.status === 'submitted' ? ', report submitted' : ''}`);
+    const tag = element('span', undefined, 'cell-tag');
+    tag.append(element('span', status[1].toUpperCase(), 'calendar-full-label'), element('span', config.statuses[row?.status]?.code || '—', 'calendar-short-label'));
+    cell.append(element('span', String(number), 'cell-num'), tag);
+    row?.additional_statuses.forEach(key => {
+      const extra = element('span', undefined, 'calendar-secondary-status');
+      extra.title = statuses[key]?.[1] || key;
+      extra.append(element('span', statuses[key]?.[1] || key, 'calendar-full-label'), element('span', config.statuses[key]?.code || key, 'calendar-short-label'));
+      cell.append(extra);
+    });
+    if (row?.report.status === 'submitted') {
+      const report = element('span', undefined, 'calendar-report-marker'); report.title = 'Report submitted';
+      report.append(element('span', 'Report submitted', 'calendar-full-label'), element('span', 'R', 'calendar-short-label'));
+      cell.append(report);
+    }
+    dayEvents.forEach(event => {
+      const marker = element('span', undefined, 'company-event-marker'); marker.title = event.title;
+      marker.append(element('span', `◆ ${event.title}`, 'calendar-full-label'), element('span', '◆', 'calendar-short-label'));
+      cell.append(marker);
+    });
     grid.append(cell);
   }
 }
 
 function showDay(date, row, dayEvents) {
-  $('modal-date-title').textContent = date;
+  $('modal-date-title').textContent = `${employeeCalendar?.name || 'Employee'} · ${date}`;
   $('modal-status').textContent = statuses[row?.status]?.[1] || row?.status || 'No attendance record';
   for (const id of ['shift', 'time', 'hours']) $(`modal-${id}`).textContent = 'Not provided';
+  if (row?.shift) $('modal-shift').textContent = `${row.shift.starts_at || '—'} / ${row.shift.ends_at || '—'}${row.shift.overnight ? ' · Overnight' : ''}`;
+  if (row?.worked_hours !== null && row?.worked_hours !== undefined) $('modal-hours').textContent = `${row.worked_hours} hours`;
   $('modal-time').textContent = row ? `${row.time_in || '—'} / ${row.time_out || '—'}` : '—';
   $('modal-late').textContent = row ? `${row.late_minutes} minutes` : '—';
   $('modal-ot').textContent = row ? `${row.ot_hours} approved hours · ${row.pending_ot_hours} pending` : '—';
   const box = $('modal-cr-box'); box.replaceChildren(element('p', 'Read-only attendance details.', 'muted'));
   if (row?.remarks) box.append(element('p', `Remarks: ${row.remarks}`));
+  if (row?.leave) box.append(element('p', `${row.leave.type} leave · ${row.leave.approval_status}`));
+  if (row?.holiday) box.append(element('p', `Holiday: ${row.holiday.name}`));
+  if (row?.correction) box.append(element('p', `Correction request: ${row.correction.status}${row.correction.reason ? ` · ${row.correction.reason}` : ''}`));
+  const reportStatus = row?.report?.status;
+  box.append(element('p', ({ submitted: 'Report submitted', missing: 'No report · Required for this shift', not_required: 'Report not required for this shift', unavailable: 'Report information unavailable' })[reportStatus] || 'Report information unavailable'));
+  if (reportStatus === 'submitted' && row.report.url) {
+    const link = element('a', 'Open progress report', 'btn btn-secondary');
+    const target = new URL(row.report.url, window.location.origin);
+    if (target.origin === window.location.origin) { link.href = target.href; link.target = '_blank'; link.rel = 'noopener'; box.append(link); }
+  }
   if (row?.additional_statuses.length) box.append(element('p', `Additional statuses: ${row.additional_statuses.map(status => statuses[status]?.[1] || status).join(', ')}`));
   dayEvents.forEach(event => box.append(element('p', `◆ ${event.title}${event.extendedProps.description ? ` · ${event.extendedProps.description}` : ''}`)));
   $('day-modal').classList.add('open'); $('modal-close-btn').focus();
+}
+
+function renderEmployeeWidgets(employee) {
+  const panel = document.querySelector('.widget-panel .widget-box');
+  panel.replaceChildren(element('h2', 'Leave balance', 'widget-title'));
+  const balances = employee?.leave_balances || [];
+  balances.forEach(balance => {
+    const row = element('div', undefined, 'leave-row');
+    row.append(element('span', balance.type, 'leave-type'), element('span', `${balance.remaining_days} days`, 'leave-val'));
+    panel.append(row);
+  });
+  if (!balances.length) panel.append(element('p', 'Leave balance unavailable.', 'muted'));
+  panel.append(element('h2', 'Next payday', 'widget-title'), element('p', employee?.next_payday || 'Payday unavailable.', 'leave-val'));
 }
 
 function renderEvents() {

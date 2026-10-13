@@ -12,7 +12,7 @@ class DashboardController extends Controller
             'user' => $request->user()->only(['name', 'role', 'employee_id']),
             'hrRoles' => config('calendar.hr_roles'),
             'month' => now()->format('Y-m'),
-            'statuses' => config('calendar.statuses') + ['invalid' => config('calendar.invalid_status')],
+            'statuses' => config('calendar.statuses') + ['invalid' => config('calendar.invalid_status'), 'unrecorded' => config('calendar.unrecorded_status')],
         ];
         $html = file_get_contents(base_path('../flow-asia-dashboard-prototype/index.html'));
         $head = '<base href="'.e(url('/m4/assets')).'/">'

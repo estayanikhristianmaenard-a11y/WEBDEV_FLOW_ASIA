@@ -7,7 +7,7 @@ use Illuminate\Support\Collection;
 
 interface CalendarDataSource
 {
-    /** Return attendance rows, including all statuses for priority handling later. */
+    /** Return source rows including simultaneous statuses and optional calendar_details metadata. */
     public function forEmployee(int $employeeId, CarbonInterface $from, CarbonInterface $to): Collection;
 
     /** Return rows grouped by employee ID, using one attendance query. */
