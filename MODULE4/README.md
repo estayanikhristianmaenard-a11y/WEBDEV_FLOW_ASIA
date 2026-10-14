@@ -136,6 +136,9 @@ long event content can create extra pages.
 
 ## Verification and handoff
 
+Use the [QA task and progress tracker](flow-asia-backend/docs/qa-progress.md) to
+check the 24 manual acceptance cases, record defects and track shared release gates.
+
 See [SETUP.md](flow-asia-backend/SETUP.md) for current results and commands.
 Checks cover regressions, actual browser flows, role boundaries, mobile layouts
 and real PDFs. The demo has five departments, 40 employees, an empty calendar,
