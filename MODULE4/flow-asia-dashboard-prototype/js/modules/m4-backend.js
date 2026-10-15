@@ -1,5 +1,7 @@
 import { request } from '../core/api.js';
 import { calendarDates, renderTeamCalendar, renderTeamLegend } from './m4-team-calendar.js';
+import { mountDashboardShell, renderSelectedDay, renderToday } from './m4-dashboard-shell.js';
+import { installCalendarSync } from './m4-sync.js';
 
 const config = window.flowAsiaBackend;
 const canManage = config.hrRoles.includes(config.user.role);
@@ -10,6 +12,8 @@ let employeeCalendar = null;
 let employeeLoadVersion = 0;
 let employeeLoadError = '';
 let events = [];
+let eventsLoading = false;
+let eventsError = '';
 let selectedId = null;
 let loadVersion = 0;
 let searchVersion = 0;
@@ -19,6 +23,8 @@ let activeResult = -1;
 let searchTimer;
 let calendarView = 'month';
 let calendarWeek = 0;
+let selectedDate = null;
+let todayVersion = 0;
 const $ = id => document.getElementById(id);
 
 function element(tag, text, className) {
@@ -38,33 +44,43 @@ function button(text, action, className = 'btn btn-secondary') {
 function message(text) { $('backend-status').textContent = text; }
 
 export async function initBackendDashboard() {
+  mountDashboardShell(config, canInspect);
   const status = element('p', '', 'muted');
   status.id = 'backend-status';
   status.setAttribute('role', 'status');
-  document.querySelector('main').prepend(status);
+  $('calendar-tools').append(status);
+  const retry = button('Refresh data', () => refresh(), 'btn btn-secondary');
+  retry.id = 'refresh-data-btn';
+  $('calendar-tools').insertBefore(retry, status);
   const switcher = $('role-toggle-btn').closest('.role-switcher-card');
   switcher.remove();
   $('user-display-name').textContent = config.user.name;
   $('user-display-role').textContent = config.user.role.replaceAll('_', ' ');
   $('user-avatar').textContent = config.user.name.split(' ').map(part => part[0]).slice(0, 2).join('');
   $('role-badge').textContent = canManage ? 'HR VIEW' : canInspect ? 'SUPERVISOR VIEW' : 'STAFF VIEW';
-  $('header-dashboard-title').textContent = canInspect ? 'Calendar Management Dashboard' : 'Schedule Dashboard';
-  $('header-dashboard-sub').textContent = canInspect ? 'Employee calendars, team calendar and company events' : 'Company events and schedule';
+  $('header-dashboard-title').textContent = `Good day, ${config.user.name.trim().split(/\s+/)[0] || 'there'}`;
+  $('header-dashboard-sub').textContent = config.todayLabel;
   $('hr-dashboard-view').classList.toggle('hidden', !canInspect);
   $('personal-quick-actions').hidden = true;
   document.querySelector('.mis-grid').hidden = true;
-  document.querySelector('.widget-panel .widget-box').hidden = false;
   $('export-pdf-btn').textContent = 'Export PDF';
   $('export-pdf-btn').addEventListener('click', exportPdf);
   document.querySelectorAll('#staff-dashboard-view .card-kpi .kpi-subtext').forEach(node => { node.textContent = 'Recorded days in selected month'; });
   const personalLegend = document.querySelector('.cal-container .lg');
   personalLegend.replaceChildren();
-  Object.values(config.statuses).forEach(status => {
+  const extendedLegend = element('details', undefined, 'extended-legend');
+  extendedLegend.append(element('summary', 'More indicators'));
+  const extendedItems = element('div', undefined, 'extended-legend-items');
+  extendedLegend.append(extendedItems);
+  Object.entries(config.statuses).forEach(([key, status]) => {
     const item = element('span', undefined, 'lg-item');
-    item.append(element('span', status.code, `team-status team-status-${status.ui_class}`), element('span', status.label));
-    personalLegend.append(item);
+    const swatch = element('i', undefined, `legend-swatch legend-swatch-${status.ui_class}`);
+    swatch.setAttribute('aria-hidden', 'true');
+    item.append(swatch, element('span', key === 'rest_day' ? 'Rest day or holiday' : status.label));
+    (['present', 'late', 'absent', 'leave_approved', 'overtime', 'rest_day'].includes(key) ? personalLegend : extendedItems).append(item);
   });
-  personalLegend.append(element('span', '— No record', 'lg-item'), element('span', '◆ Company event', 'lg-item'), element('span', 'R Report submitted', 'lg-item'));
+  extendedItems.append(element('span', '— No record', 'lg-item'), element('span', '◆ Company event', 'lg-item'), element('span', 'R Report submitted', 'lg-item'));
+  personalLegend.append(extendedLegend);
 
   const oldMonthButton = document.querySelector('.cal-header button');
   const monthInput = element('input', undefined, 'btn btn-secondary');
@@ -99,7 +115,10 @@ export async function initBackendDashboard() {
   }
   const previousPeriod = button('Previous', () => changePeriod(-1)); previousPeriod.setAttribute('aria-label', 'Previous calendar period');
   const nextPeriod = button('Next', () => changePeriod(1)); nextPeriod.setAttribute('aria-label', 'Next calendar period');
-  monthControls.append(previousPeriod, monthInput, nextPeriod, viewMode);
+  monthControls.append(previousPeriod, nextPeriod);
+  const periodOptions = element('div', undefined, 'calendar-month-controls period-options');
+  periodOptions.append(monthInput, viewMode);
+  $('calendar-tools').append(periodOptions);
   oldMonthButton.replaceWith(monthControls);
   monthInput.addEventListener('change', () => {
     if (!/^\d{4}-\d{2}$/.test(monthInput.value) || !monthInput.validity.valid) return;
@@ -145,26 +164,36 @@ export async function initBackendDashboard() {
   eventCard.append(element('h2', 'Company events', 'widget-title'));
   if (canManage) eventCard.append(button('Create event', () => editEvent(), 'btn btn-primary'));
   const list = element('div'); list.id = 'company-event-list'; eventCard.append(list);
-  document.querySelector('.widget-panel').append(eventCard);
-  const summaryCards = document.querySelector('#staff-dashboard-view .g4');
+  $('supplementary-cards').append(eventCard);
+  const summaryCards = $('summary-metrics');
   for (const [id, label] of [['late-minutes', 'Total late minutes'], ['cutoff-ot', 'OT hours this cutoff']]) {
     const card = element('article', undefined, 'card card-kpi');
     const value = element('span', '—', 'kpi-num'); value.id = `kpi-${id}`;
     card.append(value, element('span', label, 'kpi-label'), element('span', 'From calendar source records', 'kpi-subtext'));
     summaryCards.append(card);
   }
-  document.querySelector('#kpi-leave + .kpi-label').textContent = 'Leave days used';
   initSearch();
   $('clear-inspection-btn').addEventListener('click', () => {
     selectedId = null; $('hr-search-input').value = ''; loadEmployeeCalendar().catch(() => {});
   });
   await refresh();
+  installCalendarSync({
+    refresh,
+    isBlocked: () => $('refresh-data-btn').disabled || $('export-pdf-btn').disabled
+      || $('staff-calendar-grid').getAttribute('aria-busy') === 'true'
+      || document.querySelector('.modal-backdrop.open') !== null
+      || document.activeElement?.matches('input, select, textarea'),
+    onError: error => message(error.message || 'Calendar refresh failed. Please retry.'),
+  });
 }
 
 async function refresh() {
   const version = ++loadVersion;
   const selectedMonth = month;
-  team = null; events = [];
+  team = null; events = []; employeeCalendar = null;
+  eventsLoading = true; eventsError = '';
+  $('day-modal').classList.remove('open');
+  $('refresh-data-btn').disabled = true;
   renderCalendar();
   if (canInspect) {
     $('team-calendar').textContent = 'Loading team calendar…';
@@ -174,11 +203,19 @@ async function refresh() {
   }
   $('company-event-list').textContent = 'Loading events…';
   message('Loading calendar…');
+  const exclusiveEnd = new Date(`${selectedMonth}-01T00:00:00Z`);
+  exclusiveEnd.setUTCMonth(exclusiveEnd.getUTCMonth() + 1);
+  const endDate = `${String(exclusiveEnd.getUTCFullYear()).padStart(4, '0')}-${String(exclusiveEnd.getUTCMonth() + 1).padStart(2, '0')}-01`;
   const responses = await Promise.allSettled([
     canInspect ? request(`/hr/calendar/team?month=${selectedMonth}`) : Promise.resolve(null),
-    loadEmployeeCalendar()
+    loadEmployeeCalendar(),
+    request(`/calendar/events?start=${selectedMonth}-01&end=${endDate}`),
+    loadToday()
   ]);
   if (version !== loadVersion) return;
+  eventsLoading = false;
+  events = responses[2].status === 'fulfilled' ? responses[2].value : [];
+  eventsError = responses[2].status === 'rejected' ? responses[2].reason.message : '';
   team = responses[0].status === 'fulfilled' ? responses[0].value : null;
   if (team) {
     const filter = $('team-department');
@@ -189,11 +226,28 @@ async function refresh() {
     filter.value = [...filter.options].some(option => option.value === previous) ? previous : '';
   }
   renderTeam(); renderCalendar(); renderEvents();
+  $('refresh-data-btn').disabled = false;
   const errors = responses.filter(response => response.status === 'rejected').map(response => response.reason.message);
   if (employeeLoadError) errors.push(employeeLoadError);
-  message(errors.join(' ') || (canInspect
+  message([...new Set(errors)].join(' ') || (canInspect
     ? 'Calendar loaded. Employee attendance, leave and OT are read-only.'
     : 'Calendar loaded. Attendance is read-only.'));
+}
+
+async function loadToday() {
+  const version = ++todayVersion;
+  if (!config.user.employee_id) {
+    renderToday(config, null, 'No employee profile is linked to this account.', false);
+    return;
+  }
+  renderToday(config, null, '', true);
+  try {
+    const response = await request(`/calendar/employees/${config.user.employee_id}/month?month=${config.today.slice(0, 7)}`);
+    if (version === todayVersion) renderToday(config, response.data, '', false);
+  } catch (error) {
+    if (version === todayVersion) renderToday(config, null, error.message, false);
+    throw error;
+  }
 }
 
 async function exportPdf() {
@@ -217,22 +271,22 @@ async function loadEmployeeCalendar() {
   const employeeId = selectedId ?? config.user.employee_id;
   const requestedMonth = month;
   employeeCalendar = null; employeeLoadError = ''; renderCalendar();
+  $('staff-calendar-grid').setAttribute('aria-busy', 'true');
   if (!employeeId) {
-    employeeLoadError = 'No employee profile is linked to this account. Select an employee to view their calendar.';
-    const exclusiveEnd = new Date(`${requestedMonth}-01T00:00:00Z`);
-    exclusiveEnd.setUTCMonth(exclusiveEnd.getUTCMonth() + 1);
-    const response = await request(`/calendar/events?start=${requestedMonth}-01&end=${exclusiveEnd.toISOString().slice(0, 10)}`);
-    if (version !== employeeLoadVersion) return;
-    events = response; renderTeam(); renderEvents(); message(employeeLoadError); return;
+    employeeLoadError = canInspect ? 'Select an employee to view their calendar.' : 'No employee profile is linked to this account. Contact HR.';
+    $('staff-calendar-grid').setAttribute('aria-busy', 'false');
+    message(employeeLoadError); return;
   }
   message('Loading employee calendar…');
   try {
     const response = await request(`/calendar/employees/${employeeId}/month?month=${requestedMonth}`);
     if (version !== employeeLoadVersion) return;
-    employeeCalendar = response.data; events = response.data.company_events || [];
-    renderCalendar(); renderTeam(); renderEvents(); message('Employee calendar loaded. Read-only.');
+    employeeCalendar = response.data;
+    renderCalendar(); message(eventsError || 'Employee calendar loaded. Read-only.');
   } catch (error) {
     if (version === employeeLoadVersion) { employeeLoadError = error.message; message(error.message); throw error; }
+  } finally {
+    if (version === employeeLoadVersion) $('staff-calendar-grid').setAttribute('aria-busy', 'false');
   }
 }
 
@@ -374,6 +428,7 @@ function renderCalendar() {
   const title = new Date(`${month}-01T00:00:00Z`).toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })
     + (calendarView === 'week' ? ` · Week ${calendarWeek + 1}` : '');
   document.querySelector('.cal-month-title').textContent = title;
+  $('summary-title').textContent = `${new Date(`${month}-01T00:00:00Z`).toLocaleDateString('en-US', { month: 'long', timeZone: 'UTC' })} summary`;
   const grid = $('staff-calendar-grid');
   grid.setAttribute('aria-label', title);
   grid.closest('.cal-container').setAttribute('aria-label', `${title} attendance calendar`);
@@ -386,10 +441,12 @@ function renderCalendar() {
   $('inspected-emp-name').textContent = employee?.name || 'Employee records unavailable';
   $('calendar-employee-meta').textContent = employee ? `${employee.employee_no} · ${employee.department?.name || ''} · ${employee.position || ''}` : '';
   const days = employee?.days || [];
+  if (!selectedDate?.startsWith(month)) selectedDate = config.today?.startsWith(month) ? config.today : `${month}-01`;
   for (const [id, status] of [['present', 'present'], ['late', 'late'], ['absent', 'absent'], ['leave', 'leave_approved']]) {
     $(`kpi-${id}`).textContent = employee ? (id === 'leave' ? employee.summary.leave_days_used : employee.summary.status_counts[status]) : '—';
   }
   $('kpi-late-minutes').textContent = employee?.summary.late_minutes ?? '—';
+  $('kpi-overtime').textContent = employee?.summary.status_counts.overtime ?? '—';
   $('kpi-cutoff-ot').textContent = employee?.summary.cutoff_ot_hours ?? '—';
   $('kpi-cutoff-ot').closest('.card').querySelector('.kpi-subtext').textContent = employee?.cutoff ? `${employee.cutoff.start} – ${employee.cutoff.end}` : 'Pay period unavailable';
   renderEmployeeWidgets(employee);
@@ -401,9 +458,12 @@ function renderCalendar() {
     const status = statuses[row?.status] || ['', row?.status || (employee ? 'No record' : 'Not loaded')];
     const dayEvents = events.filter(event => event.start <= date && event.end > date);
     const cell = button('', () => showDay(date, row, dayEvents), `cell${status[0] ? ` s-${status[0]}` : ''}`);
+    cell.dataset.date = date;
+    cell.classList.toggle('today', date === config.today);
+    if (date === config.today) cell.setAttribute('aria-current', 'date');
     cell.setAttribute('role', 'gridcell'); cell.setAttribute('aria-label', `${date}: ${status[1]}${dayEvents.length ? `, ${dayEvents.length} company events` : ''}${row?.report.status === 'submitted' ? ', report submitted' : ''}`);
     const tag = element('span', undefined, 'cell-tag');
-    tag.append(element('span', status[1].toUpperCase(), 'calendar-full-label'), element('span', config.statuses[row?.status]?.code || '—', 'calendar-short-label'));
+    tag.append(element('span', status[1], 'calendar-full-label'), element('span', config.statuses[row?.status]?.code || '—', 'calendar-short-label'));
     cell.append(element('span', String(number), 'cell-num'), tag);
     row?.additional_statuses.forEach(key => {
       const extra = element('span', undefined, 'calendar-secondary-status');
@@ -423,11 +483,14 @@ function renderCalendar() {
     });
     grid.append(cell);
   }
+  updateSelectedDay();
 }
 
 function showDay(date, row, dayEvents) {
+  selectedDate = date;
+  updateSelectedDay();
   $('modal-date-title').textContent = `${employeeCalendar?.name || 'Employee'} · ${date}`;
-  $('modal-status').textContent = statuses[row?.status]?.[1] || row?.status || 'No attendance record';
+  $('modal-status').textContent = statuses[row?.status]?.[1] || row?.status || (employeeCalendar ? 'No attendance record' : 'Employee calendar unavailable');
   for (const id of ['shift', 'time', 'hours']) $(`modal-${id}`).textContent = 'Not provided';
   if (row?.shift) $('modal-shift').textContent = `${row.shift.starts_at || '—'} / ${row.shift.ends_at || '—'}${row.shift.overnight ? ' · Overnight' : ''}`;
   if (row?.worked_hours !== null && row?.worked_hours !== undefined) $('modal-hours').textContent = `${row.worked_hours} hours`;
@@ -449,10 +512,18 @@ function showDay(date, row, dayEvents) {
   if (row?.additional_statuses.length) box.append(element('p', `Additional statuses: ${row.additional_statuses.map(status => statuses[status]?.[1] || status).join(', ')}`));
   dayEvents.forEach(event => box.append(element('p', `◆ ${event.title}${event.extendedProps.description ? ` · ${event.extendedProps.description}` : ''}`)));
   $('day-modal').classList.add('open'); $('modal-close-btn').focus();
+  $('day-modal').dataset.returnDate = date;
+}
+
+function updateSelectedDay() {
+  const row = employeeCalendar?.days.find(day => day.date === selectedDate);
+  const status = statuses[row?.status]?.[1] || (employeeCalendar ? 'No record' : 'Not loaded');
+  renderSelectedDay(selectedDate, row, status, employeeCalendar, employeeLoadError,
+    events.filter(event => event.start <= selectedDate && event.end > selectedDate));
 }
 
 function renderEmployeeWidgets(employee) {
-  const panel = document.querySelector('.widget-panel .widget-box');
+  const panel = document.querySelector('.widget-panel .widget-box:not(#attendance-today)');
   panel.replaceChildren(element('h2', 'Leave balance', 'widget-title'));
   const balances = employee?.leave_balances || [];
   balances.forEach(balance => {
@@ -461,20 +532,39 @@ function renderEmployeeWidgets(employee) {
     panel.append(row);
   });
   if (!balances.length) panel.append(element('p', 'Leave balance unavailable.', 'muted'));
-  panel.append(element('h2', 'Next payday', 'widget-title'), element('p', employee?.next_payday || 'Payday unavailable.', 'leave-val'));
+  const payday = element('div', undefined, 'leave-row');
+  const paydayText = employee?.next_payday
+    ? new Date(`${employee.next_payday}T00:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
+    : 'Unavailable';
+  const paydayDate = element('time', paydayText, 'leave-val');
+  if (employee?.next_payday) paydayDate.dateTime = employee.next_payday;
+  payday.append(element('span', 'Next payday', 'leave-type'), paydayDate); panel.append(payday);
+  if (!selectedId && employee?.position) $('user-display-role').textContent = employee.position;
 }
 
 function renderEvents() {
   const list = $('company-event-list'); list.replaceChildren();
+  if (eventsLoading || eventsError) {
+    list.append(element('p', eventsLoading ? 'Loading events…' : `Company events unavailable. ${eventsError}`, 'muted'));
+    return;
+  }
   if (!events.length) list.append(element('p', 'No company events loaded for this month.', 'muted'));
   events.forEach(event => {
     const item = element('div', undefined, 'req-item');
     item.append(element('p', `◆ ${event.title} · ${event.start}`));
     if (canManage) {
-      item.append(button('Edit', () => editEvent(event)), button('Delete', async () => {
+      item.append(button('Edit', () => editEvent(event)), button('Delete', async action => {
+        const control = action.currentTarget;
+        if (control.disabled) return;
         if (!window.confirm(`Delete company event “${event.title}”?`)) return;
-        try { await request(`/hr/events/${event.extendedProps.eventId}`, { method: 'DELETE' }); await refresh(); }
+        control.disabled = true; control.textContent = 'Deleting…';
+        try {
+          await request(`/hr/events/${event.extendedProps.eventId}`, { method: 'DELETE' });
+          await refresh();
+          message(`Company event deleted. ${$('backend-status').textContent}`);
+        }
         catch (error) { message(error.message); }
+        finally { control.disabled = false; control.textContent = 'Delete'; }
       }));
     }
     list.append(item);
@@ -492,7 +582,7 @@ function editEvent(event) {
   inclusiveEnd?.setUTCDate(inclusiveEnd.getUTCDate() - 1);
   const fields = [
     ['title', 'Title', 'text', event?.title || ''],
-    ['type', 'Event type', 'select', event?.extendedProps.type || 'other'],
+    ['type', 'Event type', 'select', event?.extendedProps.type || Object.keys(config.eventTypes)[0]],
     ['starts_on', 'Start date', 'date', event?.start || `${month}-01`],
     ['ends_on', 'End date (inclusive)', 'date', inclusiveEnd?.toISOString().slice(0, 10) || `${month}-01`],
     ['description', 'Description', 'textarea', event?.extendedProps.description || '']
@@ -500,7 +590,7 @@ function editEvent(event) {
   fields.forEach(([name, label, type, value]) => {
     const wrapper = element('label', label, 'modal-field');
     const input = element(type === 'select' || type === 'textarea' ? type : 'input', undefined, 'hr-search-input');
-    if (type === 'select') ['shoot', 'premiere', 'town_hall', 'other'].forEach(option => input.append(new Option(option.replaceAll('_', ' '), option)));
+    if (type === 'select') Object.entries(config.eventTypes).forEach(([key, label]) => input.append(new Option(label, key)));
     else if (type !== 'textarea') input.type = type;
     input.name = name; input.value = value; input.required = name !== 'description';
     if (name === 'title') input.maxLength = 150;
@@ -523,12 +613,15 @@ function editEvent(event) {
   form.append(save, button('Cancel', close)); modal.append(form); document.body.append(modal);
   document.addEventListener('keydown', onKey); inputs.title.focus();
   form.addEventListener('submit', async submit => {
-    submit.preventDefault(); save.disabled = true; error.textContent = '';
+    submit.preventDefault();
+    if (save.disabled) return;
+    save.disabled = true; save.textContent = 'Saving…'; error.textContent = '';
     try {
       await request(event ? `/hr/events/${event.extendedProps.eventId}` : '/hr/events', {
         method: event ? 'PUT' : 'POST', body: Object.fromEntries(Object.entries(inputs).map(([name, input]) => [name, input.value]))
       });
       close(); await refresh();
-    } catch (failure) { error.textContent = failure.message; save.disabled = false; }
+      message(`Company event ${event ? 'updated' : 'created'}. ${$('backend-status').textContent}`);
+    } catch (failure) { error.textContent = failure.message; save.disabled = false; save.textContent = 'Save event'; }
   });
 }

@@ -4,6 +4,7 @@ import { request } from '../js/core/api.js';
 
 beforeEach(() => {
   globalThis.document = { querySelector: () => ({ content: 'test-csrf-token' }) };
+  delete globalThis.window;
 });
 
 test('writes include the session, CSRF token and JSON body', async () => {
@@ -15,6 +16,7 @@ test('writes include the session, CSRF token and JSON body', async () => {
   const result = await request('/hr/events', { method: 'POST', body: { title: 'Town hall' } });
   assert.equal(result.data.id, 7);
   assert.equal(sent.options.credentials, 'same-origin');
+  assert.equal(sent.options.cache, 'no-store');
   assert.equal(sent.options.headers['X-CSRF-TOKEN'], 'test-csrf-token');
   assert.deepEqual(JSON.parse(sent.options.body), { title: 'Town hall' });
 });
@@ -56,4 +58,31 @@ test('PDF downloads return binary data and keep authorization errors readable', 
 test('HTML cannot be downloaded as a PDF', async () => {
   globalThis.fetch = async () => ({ status: 200, ok: true, headers: new Headers({ 'Content-Type': 'text/html' }) });
   await assert.rejects(request('/calendar/employees/2/pdf', { responseType: 'blob' }), /did not return a PDF/);
+});
+
+test('API calls retain the server application path when hosted in a subdirectory', async () => {
+  globalThis.window = { flowAsiaBackend: { baseUrl: 'http://localhost/flow-asia/public/' } };
+  let requestedUrl;
+  globalThis.fetch = async url => {
+    requestedUrl = url;
+    return { status: 200, ok: true, json: async () => ({ data: [] }) };
+  };
+  await request('/hr/employees/search?q=Creative');
+  assert.equal(requestedUrl, 'http://localhost/flow-asia/public/hr/employees/search?q=Creative');
+});
+
+test('HTML session failures still explain that authentication must be renewed', async () => {
+  for (const status of [401, 419]) {
+    globalThis.fetch = async () => ({ status, ok: false, json: async () => { throw new SyntaxError(); } });
+    await assert.rejects(request('/hr/events'), /session has expired/);
+  }
+});
+
+test('network and server failures provide retry instructions without exposing server diagnostics', async () => {
+  globalThis.fetch = async () => { throw new TypeError('Failed to fetch'); };
+  await assert.rejects(request('/hr/events'), /Check your connection and retry/);
+  for (const status of [500, 503]) {
+    globalThis.fetch = async () => ({ status, ok: false, json: async () => ({ message: 'SQLSTATE private database details' }) });
+    await assert.rejects(request('/hr/events'), error => /Please retry/.test(error.message) && !error.message.includes('SQLSTATE'));
+  }
 });

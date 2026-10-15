@@ -1,12 +1,12 @@
 <?php
 
-use App\Models\AttendanceDaily;
-use App\Models\CalendarReport;
-use App\Models\CompanyEvent;
-use App\Models\Employee;
-use App\Models\User;
-use App\Services\CalendarPdfData;
 use Database\Seeders\DemoSeeder;
+use FlowAsia\Module4\Models\AttendanceDaily;
+use FlowAsia\Module4\Models\CalendarReport;
+use FlowAsia\Module4\Models\CompanyEvent;
+use FlowAsia\Module4\Models\Employee;
+use FlowAsia\Module4\Models\User;
+use FlowAsia\Module4\Services\CalendarPdfData;
 use Illuminate\Support\Facades\DB;
 
 beforeEach(function () {
@@ -154,6 +154,31 @@ it('includes approved overtime across a month boundary for the supplied pay cuto
     $this->actingAs($user)->getJson('/calendar/employees/'.$user->employee_id.'/month?month=2026-10')->assertOk()
         ->assertJsonCount(1, 'data.days')->assertJsonPath('data.summary.approved_ot_hours', 3)
         ->assertJsonPath('data.summary.cutoff_ot_hours', 5)->assertJsonPath('data.days.0.status', 'overtime');
+});
+
+it('excludes rejected punch overtime from employee team and PDF totals without modifying the source', function () {
+    $user = User::where('email', 'employee@test.com')->firstOrFail();
+    AttendanceDaily::where('employee_id', $user->employee_id)->delete();
+    $row = AttendanceDaily::create([
+        'employee_id' => $user->employee_id, 'date' => '2026-10-01', 'status' => 'overtime',
+        'ot_hours' => 3, 'late_minutes' => 20, 'pending_ot_hours' => 1,
+        'calendar_details' => ['punch_status' => 'rejected', 'worked_minutes' => 480],
+    ]);
+
+    $this->actingAs($user)->getJson('/calendar/employees/'.$user->employee_id.'/month?month=2026-10')
+        ->assertOk()->assertJsonPath('data.days.0.status', 'invalid')
+        ->assertJsonPath('data.days.0.ot_hours', 0)->assertJsonPath('data.days.0.late_minutes', 0)
+        ->assertJsonPath('data.days.0.worked_hours', null)->assertJsonPath('data.days.0.pending_ot_hours', 1)
+        ->assertJsonPath('data.summary.approved_ot_hours', 0)->assertJsonPath('data.summary.cutoff_ot_hours', 0)
+        ->assertJsonPath('data.summary.status_counts.overtime', 0);
+    $pdf = app(CalendarPdfData::class)->build(Employee::findOrFail($user->employee_id), $user, '2026-10');
+    expect($pdf['totals']['approved_ot_hours'])->toBe(0.0);
+
+    $team = $this->actingAs(User::where('email', 'hr@test.com')->firstOrFail())
+        ->getJson('/hr/calendar/team?month=2026-10')->assertOk();
+    $employee = collect($team->json('employees'))->firstWhere('id', $user->employee_id);
+    expect($employee['days'][0]['ot_hours'])->toBe(0);
+    $this->assertDatabaseHas('attendance_daily', ['id' => $row->id, 'ot_hours' => 3, 'late_minutes' => 20]);
 });
 
 it('bounds query counts for a 240 employee month without per employee attendance or report queries', function () {

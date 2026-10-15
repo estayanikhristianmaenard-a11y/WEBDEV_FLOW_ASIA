@@ -19,7 +19,11 @@
     </source>
     <php>
         <env name="APP_ENV" value="testing"/>
+        <env name="M4_MODE" value="standalone" force="true"/>
+        <env name="M4_ROUTE_PREFIX" value="" force="true"/>
+        <env name="M4_ROUTE_NAME_PREFIX" value="" force="true"/>
         <env name="M4_STANDALONE_PREVIEW" value="false" force="true"/>
+        <env name="M4_PREVIEW_USER_EMAIL" value="hr@test.com" force="true"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
