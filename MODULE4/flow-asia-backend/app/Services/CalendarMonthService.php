@@ -1,32 +1,31 @@
 <?php
 
-namespace App\Services;
+namespace FlowAsia\Module4\Services;
 
-use App\Contracts\CalendarContextSource;
-use App\Contracts\CalendarDataSource;
-use App\Models\CompanyEvent;
-use App\Models\Employee;
 use Carbon\CarbonImmutable;
+use FlowAsia\Module4\Contracts\CalendarContextSource;
+use FlowAsia\Module4\Contracts\CalendarDataSource;
+use FlowAsia\Module4\Contracts\CompanyEventSource;
+use FlowAsia\Module4\Models\Employee;
 use Illuminate\Support\Collection;
 
 class CalendarMonthService
 {
-    public function __construct(private CalendarDataSource $source, private CalendarContextSource $context, private CalendarDayPresenter $presenter) {}
+    public function __construct(private CalendarDataSource $source, private CalendarContextSource $context, private CalendarDayPresenter $presenter, private CompanyEventSource $events) {}
 
-    public function build(Employee $employee, string $month): array
+    public function build(Employee|CalendarEmployee $employee, string $month): array
     {
-        $from = CarbonImmutable::createFromFormat('!Y-m', $month, config('app.timezone'))->startOfMonth();
+        $employee = $employee instanceof Employee ? CalendarEmployee::fromModel($employee) : $employee;
+        $from = CarbonImmutable::createFromFormat('!Y-m', $month, config('module4.timezone'))->startOfMonth();
         $to = $from->endOfMonth();
         $context = $this->context->forEmployees([$employee->id], $from, $to)->get($employee->id, []);
-        $events = CompanyEvent::query()->overlapping($from->toDateString(), $to->toDateString())
-            ->orderBy('starts_on')->orderBy('id')->get()->map(fn (CompanyEvent $event): array => $event->toCalendarEvent());
-        $employee->loadMissing('department:id,name');
+        $events = $this->events->between($from->toDateString(), $to->toDateString());
         $profile = $context['profile'] ?? [];
-        $today = CarbonImmutable::today(config('app.timezone'))->toDateString();
+        $today = CarbonImmutable::today(config('module4.timezone'))->toDateString();
         $reference = str_starts_with($today, $month) ? $today : $to->toDateString();
         $cutoff = collect($profile['pay_periods'] ?? [])->first(fn (array $period): bool => $period['start'] <= $reference && $period['end'] >= $reference);
-        $readFrom = $cutoff ? $from->min(CarbonImmutable::parse($cutoff['start'], config('app.timezone'))) : $from;
-        $readTo = $cutoff ? $to->max(CarbonImmutable::parse($cutoff['end'], config('app.timezone'))) : $to;
+        $readFrom = $cutoff ? $from->min(CarbonImmutable::parse($cutoff['start'], config('module4.timezone'))) : $from;
+        $readTo = $cutoff ? $to->max(CarbonImmutable::parse($cutoff['end'], config('module4.timezone'))) : $to;
         $allDays = $this->source->forEmployee($employee->id, $readFrom, $readTo)
             ->map(fn ($row): array => $this->presenter->present($row, $context['reports'][$row->date->toDateString()] ?? null))->values();
         $days = $allDays->filter(fn (array $day): bool => str_starts_with($day['date'], $month))->values();
@@ -50,7 +49,7 @@ class CalendarMonthService
 
     private function summary(Collection $days, int $daysInMonth): array
     {
-        $counts = array_fill_keys([...array_keys(config('calendar.statuses')), 'invalid'], 0);
+        $counts = array_fill_keys([...array_keys(config('module4_calendar.statuses')), 'invalid'], 0);
         $leaveDays = 0;
         foreach ($days as $day) {
             $statuses = array_unique([$day['status'], ...$day['additional_statuses']]);

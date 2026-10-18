@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Services;
+namespace FlowAsia\Module4\Services;
 
-use App\Contracts\CalendarDataSource;
-use App\Models\AttendanceDaily;
 use Carbon\CarbonInterface;
+use FlowAsia\Module4\Contracts\CalendarDataSource;
+use FlowAsia\Module4\Models\AttendanceDaily;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
 

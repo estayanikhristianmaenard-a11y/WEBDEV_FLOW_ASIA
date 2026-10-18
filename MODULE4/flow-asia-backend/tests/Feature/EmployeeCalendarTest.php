@@ -1,8 +1,8 @@
 <?php
 
-use App\Models\Employee;
-use App\Models\User;
 use Database\Seeders\DemoSeeder;
+use FlowAsia\Module4\Models\Employee;
+use FlowAsia\Module4\Models\User;
 
 beforeEach(function () {
     $this->seed(DemoSeeder::class);

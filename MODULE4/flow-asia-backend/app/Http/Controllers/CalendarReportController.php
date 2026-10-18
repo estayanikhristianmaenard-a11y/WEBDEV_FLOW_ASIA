@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace FlowAsia\Module4\Http\Controllers;
 
-use App\Contracts\CalendarContextSource;
-use App\Models\Employee;
+use FlowAsia\Module4\Contracts\CalendarContextSource;
+use FlowAsia\Module4\Services\CalendarEmployee;
 use Illuminate\Http\Response;
 
 class CalendarReportController extends Controller
@@ -11,11 +11,11 @@ class CalendarReportController extends Controller
     /**
      * Handle the incoming request.
      */
-    public function __invoke(Employee $employee, int $report, CalendarContextSource $context): Response
+    public function __invoke(CalendarEmployee $employee, int $report, CalendarContextSource $context): Response
     {
         $record = $context->reportForEmployee($employee->id, $report);
         abort_unless($record, 404);
 
-        return response()->view('calendar.report', ['employee' => $employee, 'report' => $record])->header('Cache-Control', 'private, no-store');
+        return response()->view('m4::calendar.report', ['employee' => $employee, 'report' => $record])->header('Cache-Control', 'private, no-store');
     }
 }

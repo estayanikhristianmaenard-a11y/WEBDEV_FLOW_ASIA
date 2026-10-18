@@ -1,7 +1,7 @@
 <?php
 
-use App\Providers\AppServiceProvider;
+use FlowAsia\Module4\Providers\Module4ServiceProvider;
 
 return [
-    AppServiceProvider::class,
+    Module4ServiceProvider::class,
 ];

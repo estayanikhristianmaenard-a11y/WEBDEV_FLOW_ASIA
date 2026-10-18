@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace FlowAsia\Module4\Http\Controllers;
 
 abstract class Controller
 {

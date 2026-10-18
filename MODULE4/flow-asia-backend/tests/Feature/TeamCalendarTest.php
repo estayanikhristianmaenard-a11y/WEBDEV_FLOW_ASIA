@@ -1,10 +1,10 @@
 <?php
 
-use App\Models\AttendanceDaily;
-use App\Models\Employee;
-use App\Models\User;
 use Carbon\CarbonImmutable;
 use Database\Seeders\DemoSeeder;
+use FlowAsia\Module4\Models\AttendanceDaily;
+use FlowAsia\Module4\Models\Employee;
+use FlowAsia\Module4\Models\User;
 use Illuminate\Support\Facades\DB;
 
 beforeEach(function () {

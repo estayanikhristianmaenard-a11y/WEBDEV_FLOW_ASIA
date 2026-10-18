@@ -1,8 +1,5 @@
 <?php
 
-use App\Http\Middleware\ReadOnlyCalendar;
-use App\Http\Middleware\StandaloneModulePreview;
-use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -15,13 +12,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Run before CSRF so calendar write attempts are consistently forbidden.
-        $middleware->prepend(ReadOnlyCalendar::class);
-        $middleware->prependToPriorityList(
-            AuthenticatesRequests::class,
-            StandaloneModulePreview::class,
-        );
-        $middleware->redirectGuestsTo('/login'); // Owned by the main system after integration.
+        $middleware->redirectGuestsTo(fn (Request $request): string => url('/login'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

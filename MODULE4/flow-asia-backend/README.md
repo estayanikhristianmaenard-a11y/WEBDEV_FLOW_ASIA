@@ -1,6 +1,7 @@
 # Flow Asia M4 backend
 
-Standalone Laravel Calendar & Schedule Dashboard for members #09, #10 and #11.
+Laravel Calendar & Schedule Dashboard for members #09, #10 and #11, with standalone
+development and shared-application assembly modes.
 Start with [SETUP.md](SETUP.md) and the [project guide](../README.md).
 
 The backend serves the sibling frontend at `/m4`. Features include combined
@@ -9,8 +10,11 @@ events, protected report viewing and landscape PDF export.
 
 Policies enforce access; HR event writes require CSRF. Attendance, leave,
 overtime and reports are read-only. Local preview uses seeded identities;
-shared authentication and M2/M3/M5/M6/M12 integration remain pending. Do not
-migrate local stub tables into the group's existing database.
+shared mode accepts the host's authenticated user and replaceable employee,
+attendance, context and event adapters. Run `php artisan m4:check` to validate
+wiring. Follow the [assembly contract](docs/dashboard-integration.md#assemble-m4-inside-the-shared-laravel-application)
+when joining the group application. Actual upstream data acceptance remains pending.
+Shared mode excludes all standalone migrations and demo identities.
 
 Guides:
 

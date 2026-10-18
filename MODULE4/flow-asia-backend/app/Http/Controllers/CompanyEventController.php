@@ -1,40 +1,44 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace FlowAsia\Module4\Http\Controllers;
 
-use App\Http\Requests\CompanyEventFeedRequest;
-use App\Http\Requests\CompanyEventRequest;
-use App\Models\CompanyEvent;
 use Carbon\CarbonImmutable;
+use FlowAsia\Module4\Contracts\CompanyEventSource;
+use FlowAsia\Module4\Http\Requests\CompanyEventFeedRequest;
+use FlowAsia\Module4\Http\Requests\CompanyEventRequest;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
 class CompanyEventController extends Controller
 {
-    public function index(): JsonResponse
+    public function __construct(private CompanyEventSource $events) {}
+
+    public function index(Request $request): JsonResponse
     {
-        return response()->json(CompanyEvent::query()->orderBy('starts_on')->orderBy('id')->paginate(20));
+        $request->validate(['page' => ['sometimes', 'integer', 'min:1']]);
+
+        return response()->json($this->events->paginate((int) $request->input('page', 1)))->header('Cache-Control', 'private, no-store');
     }
 
     public function store(CompanyEventRequest $request): JsonResponse
     {
-        $event = new CompanyEvent($request->validated());
-        $event->created_by = $request->user()->id;
-        $event->save();
+        $event = $this->events->create($request->validated(), $request->user()->getAuthIdentifier());
 
         return response()->json(['data' => $event], 201);
     }
 
-    public function update(CompanyEventRequest $request, CompanyEvent $event): JsonResponse
+    public function update(CompanyEventRequest $request, int $event): JsonResponse
     {
-        $event->update($request->validated());
+        $event = $this->events->update($event, $request->validated());
+        abort_if($event === null, 404);
 
         return response()->json(['data' => $event]);
     }
 
-    public function destroy(CompanyEvent $event): Response
+    public function destroy(int $event): Response
     {
-        $event->delete();
+        abort_unless($this->events->delete($event), 404);
 
         return response()->noContent();
     }
@@ -42,18 +46,15 @@ class CompanyEventController extends Controller
     public function feed(CompanyEventFeedRequest $request): JsonResponse
     {
         $bounds = $request->validated();
-        $from = CarbonImmutable::parse($bounds['start'])->setTimezone(config('app.timezone'))->startOfDay();
-        $exclusiveEnd = CarbonImmutable::parse($bounds['end'])->setTimezone(config('app.timezone'))->startOfDay();
+        $from = CarbonImmutable::parse($bounds['start'])->setTimezone(config('module4.timezone'))->startOfDay();
+        $exclusiveEnd = CarbonImmutable::parse($bounds['end'])->setTimezone(config('module4.timezone'))->startOfDay();
 
         if ($exclusiveEnd->lte($from)) {
             return response()->json(['message' => 'The end must be a later calendar date.', 'errors' => ['end' => ['The end must be a later calendar date.']]], 422);
         }
 
-        $events = CompanyEvent::query()
-            ->overlapping($from->toDateString(), $exclusiveEnd->subDay()->toDateString())
-            ->orderBy('starts_on')->orderBy('id')
-            ->get()->map(fn (CompanyEvent $event) => $event->toCalendarEvent());
+        $events = $this->events->between($from->toDateString(), $exclusiveEnd->subDay()->toDateString());
 
-        return response()->json($events);
+        return response()->json($events)->header('Cache-Control', 'private, no-store');
     }
 }

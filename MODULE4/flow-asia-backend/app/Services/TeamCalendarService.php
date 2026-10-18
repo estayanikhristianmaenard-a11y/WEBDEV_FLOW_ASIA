@@ -1,34 +1,32 @@
 <?php
 
-namespace App\Services;
+namespace FlowAsia\Module4\Services;
 
-use App\Contracts\CalendarContextSource;
-use App\Contracts\CalendarDataSource;
-use App\Models\Employee;
-use App\Models\User;
 use Carbon\CarbonImmutable;
+use FlowAsia\Module4\Contracts\CalendarContextSource;
+use FlowAsia\Module4\Contracts\CalendarDataSource;
+use FlowAsia\Module4\Contracts\CalendarEmployeeDirectory;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Gate;
 
 class TeamCalendarService
 {
-    public function __construct(private CalendarDataSource $source, private CalendarContextSource $context, private CalendarDayPresenter $presenter) {}
+    public function __construct(private CalendarDataSource $source, private CalendarContextSource $context, private CalendarDayPresenter $presenter, private CalendarEmployeeDirectory $directory) {}
 
-    public function build(User $user, string $month, ?int $departmentId): array
+    public function build(Authenticatable $user, string $month, ?int $departmentId): array
     {
-        $from = CarbonImmutable::createFromFormat('!Y-m', $month, config('app.timezone'))->startOfMonth();
+        $from = CarbonImmutable::createFromFormat('!Y-m', $month, config('module4.timezone'))->startOfMonth();
         $to = $from->endOfMonth();
-        $today = CarbonImmutable::today(config('app.timezone'));
-        $employees = Employee::query()->visibleTo($user)->with('department:id,name')
-            ->when($departmentId !== null, fn ($query) => $query->where('department_id', $departmentId))
-            ->orderBy('last_name')->orderBy('first_name')->orderBy('id')->get();
+        $today = CarbonImmutable::today(config('module4.timezone'));
+        $employees = $this->directory->visibleTo($user, $departmentId);
 
         foreach ($employees as $employee) {
             Gate::forUser($user)->authorize('viewCalendar', $employee);
         }
 
         // A single batch includes the selected month and today's independent panel.
-        $rows = $this->source->forEmployees($employees->modelKeys(), $from->min($today), $to->max($today));
-        $contexts = $this->context->forEmployees($employees->modelKeys(), $from->min($today), $to->max($today));
+        $rows = $this->source->forEmployees($employees->pluck('id')->all(), $from->min($today), $to->max($today));
+        $contexts = $this->context->forEmployees($employees->pluck('id')->all(), $from->min($today), $to->max($today));
         $result = [];
         $todayGroups = ['absent' => [], 'late' => [], 'on_leave' => []];
         $pending = ['leave' => [], 'overtime' => []];

@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\User;
+use FlowAsia\Module4\Models\User;
 
 return [
 

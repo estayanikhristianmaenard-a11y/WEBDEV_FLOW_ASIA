@@ -4,8 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $report['title'] }} · Flow Asia</title>
-    <link rel="stylesheet" href="{{ url('/m4/assets/css/variables.css') }}">
-    <link rel="stylesheet" href="{{ url('/m4/assets/css/components.css') }}">
+    <link rel="stylesheet" href="{{ route('m4.assets', ['path' => 'css/variables.css']) }}">
+    <link rel="stylesheet" href="{{ route('m4.assets', ['path' => 'css/components.css']) }}">
     <style>body{display:block;padding:24px}main{max-width:800px;margin:auto}h1{margin:16px 0}.report-body{white-space:pre-wrap;overflow-wrap:anywhere;margin:24px 0}</style>
 </head>
 <body>

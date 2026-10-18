@@ -2,12 +2,12 @@
 
 namespace Database\Seeders;
 
-use App\Models\AttendanceDaily;
-use App\Models\CalendarReport;
-use App\Models\Department;
-use App\Models\Employee;
-use App\Models\User;
 use Carbon\CarbonImmutable;
+use FlowAsia\Module4\Models\AttendanceDaily;
+use FlowAsia\Module4\Models\CalendarReport;
+use FlowAsia\Module4\Models\Department;
+use FlowAsia\Module4\Models\Employee;
+use FlowAsia\Module4\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -15,13 +15,13 @@ class DemoSeeder extends Seeder
 {
     public function run(): void
     {
-        if (! app()->environment(['local', 'testing'])) {
-            throw new \RuntimeException('Demo accounts are only allowed in local or testing environments.');
+        if (config('module4.mode') !== 'standalone' || ! app()->environment(['local', 'testing'])) {
+            throw new \RuntimeException('Demo accounts are only allowed in standalone local or testing environments.');
         }
 
         DB::transaction(function () {
-            $month = CarbonImmutable::parse(config('calendar.demo_month').'-01');
-            $statuses = array_keys(config('calendar.statuses'));
+            $month = CarbonImmutable::parse(config('module4_calendar.demo_month').'-01', config('module4.timezone'));
+            $statuses = array_keys(config('module4_calendar.statuses'));
             $employees = [];
 
             // Fixed values and arithmetic provide reproducible data without randomness.

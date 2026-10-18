@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Models;
+namespace FlowAsia\Module4\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -28,13 +28,13 @@ class CompanyEvent extends Model
             'start' => $this->starts_on->toDateString(),
             'end' => $this->ends_on->addDay()->toDateString(),
             'allDay' => true,
-            'classNames' => [config('calendar.company_event.class')],
+            'classNames' => [config('module4_calendar.company_event.class')],
             'extendedProps' => [
                 'kind' => 'company_event',
                 'eventId' => $this->id,
                 'type' => $this->type,
                 'description' => $this->description,
-                'marker' => config('calendar.company_event.marker'),
+                'marker' => config('module4_calendar.company_event.marker'),
             ],
         ];
     }

@@ -1,7 +1,9 @@
 <?php
 
-namespace App\Models;
+namespace FlowAsia\Module4\Models;
 
+use FlowAsia\Module4\Contracts\CalendarIdentitySource;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -21,20 +23,21 @@ class Employee extends Model
         return $this->belongsTo(Department::class);
     }
 
-    public function scopeVisibleTo(Builder $query, User $user): Builder
+    public function scopeVisibleTo(Builder $query, Authenticatable $user): Builder
     {
-        if (in_array($user->role, config('calendar.hr_roles'), true)) {
+        $identity = app(CalendarIdentitySource::class)->forUser($user);
+        if (in_array($identity['role'], config('module4_calendar.hr_roles'), true)) {
             return $query;
         }
 
-        if ($user->employee_id === null || ! in_array($user->role, ['employee', 'supervisor'], true)) {
+        if ($identity['employee_id'] === null || ! in_array($identity['role'], ['employee', 'supervisor'], true)) {
             return $query->whereRaw('1 = 0');
         }
 
-        return $query->where(function (Builder $scope) use ($user) {
-            $scope->where('id', $user->employee_id);
-            if ($user->role === 'supervisor') {
-                $scope->orWhere('supervisor_id', $user->employee_id);
+        return $query->where(function (Builder $scope) use ($identity) {
+            $scope->where('id', $identity['employee_id']);
+            if ($identity['role'] === 'supervisor') {
+                $scope->orWhere('supervisor_id', $identity['employee_id']);
             }
         });
     }

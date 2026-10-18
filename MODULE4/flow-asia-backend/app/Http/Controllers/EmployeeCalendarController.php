@@ -1,15 +1,15 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace FlowAsia\Module4\Http\Controllers;
 
-use App\Http\Requests\EmployeeCalendarRequest;
-use App\Models\Employee;
-use App\Services\CalendarMonthService;
+use FlowAsia\Module4\Http\Requests\EmployeeCalendarRequest;
+use FlowAsia\Module4\Services\CalendarEmployee;
+use FlowAsia\Module4\Services\CalendarMonthService;
 use Illuminate\Http\JsonResponse;
 
 class EmployeeCalendarController extends Controller
 {
-    public function __invoke(EmployeeCalendarRequest $request, Employee $employee, CalendarMonthService $calendar): JsonResponse
+    public function __invoke(EmployeeCalendarRequest $request, CalendarEmployee $employee, CalendarMonthService $calendar): JsonResponse
     {
         // The route's viewCalendar policy runs before this controller reads attendance.
         $month = $request->validated('month');

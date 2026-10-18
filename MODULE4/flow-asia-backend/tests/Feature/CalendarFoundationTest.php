@@ -1,11 +1,12 @@
 <?php
 
-use App\Contracts\CalendarDataSource;
-use App\Models\Department;
-use App\Models\Employee;
-use App\Models\User;
 use Carbon\CarbonImmutable;
 use Database\Seeders\DemoSeeder;
+use FlowAsia\Module4\Contracts\CalendarDataSource;
+use FlowAsia\Module4\Models\Department;
+use FlowAsia\Module4\Models\Employee;
+use FlowAsia\Module4\Models\User;
+use Illuminate\Support\Facades\DB;
 
 beforeEach(function () {
     $this->seed(DemoSeeder::class);
@@ -42,10 +43,10 @@ it('preserves empty calendars, mid-month hires and simultaneous statuses', funct
 
 it('loads multiple employee calendars with one attendance query', function () {
     $ids = Employee::pluck('id')->all();
-    Illuminate\Support\Facades\DB::enableQueryLog();
+    DB::enableQueryLog();
     app(CalendarDataSource::class)->forEmployees($ids, CarbonImmutable::parse('2026-10-01'), CarbonImmutable::parse('2026-10-31'));
-    $queries = Illuminate\Support\Facades\DB::getQueryLog();
-    Illuminate\Support\Facades\DB::disableQueryLog();
+    $queries = DB::getQueryLog();
+    DB::disableQueryLog();
     expect($queries)->toHaveCount(1);
 });
 
@@ -60,5 +61,5 @@ it('covers every configured attendance status in the demo month', function () {
         CarbonImmutable::parse('2026-10-31'),
     );
     expect($rows->pluck('status')->unique()->sort()->values()->all())
-        ->toBe(collect(array_keys(config('calendar.statuses')))->sort()->values()->all());
+        ->toBe(collect(array_keys(config('module4_calendar.statuses')))->sort()->values()->all());
 });

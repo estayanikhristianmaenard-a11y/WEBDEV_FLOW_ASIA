@@ -1,8 +1,8 @@
 <?php
 
-use App\Models\Employee;
-use App\Models\User;
 use Database\Seeders\DemoSeeder;
+use FlowAsia\Module4\Models\Employee;
+use FlowAsia\Module4\Models\User;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 
@@ -62,6 +62,7 @@ it('blocks calendar writes before a handler can modify data', function (string $
     $employee = Employee::where('employee_no', 'EMP-002')->firstOrFail();
     Route::middleware('web')->match([$method], '/hr/employees/{employee}/calendar/attendance', function (Employee $employee) {
         $employee->update(['first_name' => 'Changed']);
+
         return response()->noContent();
     });
     $this->actingAs(User::where('email', 'hr@test.com')->firstOrFail())

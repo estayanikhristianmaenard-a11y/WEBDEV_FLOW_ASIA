@@ -35,8 +35,9 @@ Reports are `submitted` with a protected viewer link, `missing` when the shift
 requires one, `not_required`, or `unavailable`. The viewer rechecks calendar access
 and employee ownership, escapes report text, and cannot mutate reports.
 
-The dashboard uses this single combined response for personal/selected-employee
-calendars, events, summaries, balances and payday. It ignores stale selections.
+The dashboard uses this combined response for personal/selected-employee
+calendars, summaries, balances and payday. Company events also load independently
+so they remain available when an employee source fails. It ignores stale selections.
 Month/week controls change the presentation; summaries and PDF remain monthly.
 Team indicators use the batched endpoint. HR gets the same detail/report behavior.
 

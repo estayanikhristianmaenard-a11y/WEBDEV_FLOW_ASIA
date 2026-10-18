@@ -27,7 +27,7 @@
     },
     "autoload": {
         "psr-4": {
-            "App\\": "app/",
+            "FlowAsia\\Module4\\": "app/",
             "Database\\Factories\\": "database/factories/",
             "Database\\Seeders\\": "database/seeders/"
         }

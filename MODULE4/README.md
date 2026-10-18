@@ -5,6 +5,14 @@ M4 provides the employee calendar and HR/supervisor tools assigned to members
 system. Main-system authentication and M2/M3/M5/M6/M12 integration remain pending.
 Member #11 is a team assignment within M4, not the separate MIS module.
 
+The M4 integration boundary is ready for the shared application's source adapters.
+The existing sidebar/design is preserved. Calendar views refresh on returning to
+the tab, or after the host signals `flowasia:calendar-updated` following a confirmed
+save. M4 re-reads authorized source records; it does not duplicate other modules'
+data. See the [assembly and refresh guide](flow-asia-backend/docs/dashboard-integration.md).
+Actual source mapping and live shared-database acceptance still require the owners'
+code listed below.
+
 ## Run locally
 
 Follow [SETUP.md](flow-asia-backend/SETUP.md). From `flow-asia-backend`, run
@@ -101,10 +109,15 @@ component. UI text is English; calendar dates use Asia/Manila.
   `kind: 'company_event'`. Inclusive stored ends become exclusive feed ends.
 - Pending leave/OT are employee/date indicators, not distinct request counts.
 
-Replace `StubCalendarDataSource` and `StubCalendarContextSource` via their
-container bindings for group integration. Context JSON columns and
+For group assembly, register `FlowAsia\Module4\Providers\Module4ServiceProvider`
+in the host and set `M4_MODE=shared`. Employee, attendance, context, identity and
+event interfaces are replaceable through configuration or host container bindings.
+The host keeps its own models, session and root routes; M4 mounts at `/modules/m4`.
+Run `php artisan m4:check` and follow the [assembly contract](flow-asia-backend/docs/dashboard-integration.md#assemble-m4-inside-the-shared-laravel-application).
+Context JSON columns and
 `calendar_reports` are local stub storage. Do not migrate stub tables into the
-existing group database.
+existing group database. All demo migrations are isolated under
+`database/migrations/standalone` and are not loaded in shared mode.
 
 ## Display and counting rules
 

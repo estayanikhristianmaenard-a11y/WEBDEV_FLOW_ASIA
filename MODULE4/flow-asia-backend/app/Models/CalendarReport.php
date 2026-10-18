@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Models;
+namespace FlowAsia\Module4\Models;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Casts\Attribute;

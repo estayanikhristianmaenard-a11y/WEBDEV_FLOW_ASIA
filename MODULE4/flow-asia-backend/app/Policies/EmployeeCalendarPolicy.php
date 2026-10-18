@@ -1,40 +1,43 @@
 <?php
 
-namespace App\Policies;
+namespace FlowAsia\Module4\Policies;
 
-use App\Models\Employee;
-use App\Models\User;
+use FlowAsia\Module4\Contracts\CalendarIdentitySource;
+use FlowAsia\Module4\Models\Employee;
+use FlowAsia\Module4\Services\CalendarEmployee;
+use Illuminate\Contracts\Auth\Authenticatable;
 
 class EmployeeCalendarPolicy
 {
-    public function viewCalendar(User $user, Employee $employee): bool
+    public function viewCalendar(Authenticatable $user, Employee|CalendarEmployee $employee): bool
     {
-        if (in_array($user->role, config('calendar.hr_roles'), true)) {
+        $identity = app(CalendarIdentitySource::class)->forUser($user);
+        if (in_array($identity['role'], config('module4_calendar.hr_roles'), true)) {
             return true;
         }
 
-        if ($user->employee_id === null || ! in_array($user->role, ['employee', 'supervisor'], true)) {
+        if ($identity['employee_id'] === null || ! in_array($identity['role'], ['employee', 'supervisor'], true)) {
             return false;
         }
 
-        $ownCalendar = (int) $user->employee_id === (int) $employee->id;
+        $ownCalendar = (int) $identity['employee_id'] === (int) $employee->id;
 
-        return $ownCalendar || ($user->role === 'supervisor'
+        return $ownCalendar || ($identity['role'] === 'supervisor'
             && $employee->supervisor_id !== null
-            && (int) $employee->supervisor_id === (int) $user->employee_id);
+            && (int) $employee->supervisor_id === (int) $identity['employee_id']);
     }
 
-    public function updateAttendance(User $user, Employee $employee): bool
+    public function updateAttendance(Authenticatable $user, Employee|CalendarEmployee $employee): bool
     {
         return false;
     }
 
-    public function updateLeave(User $user, Employee $employee): bool
+    public function updateLeave(Authenticatable $user, Employee|CalendarEmployee $employee): bool
     {
         return false;
     }
 
-    public function updateOvertime(User $user, Employee $employee): bool
+    public function updateOvertime(Authenticatable $user, Employee|CalendarEmployee $employee): bool
     {
         return false;
     }

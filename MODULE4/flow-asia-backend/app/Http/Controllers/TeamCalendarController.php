@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace FlowAsia\Module4\Http\Controllers;
 
-use App\Http\Requests\TeamCalendarRequest;
-use App\Services\TeamCalendarService;
+use FlowAsia\Module4\Http\Requests\TeamCalendarRequest;
+use FlowAsia\Module4\Services\TeamCalendarService;
 use Illuminate\Http\JsonResponse;
 
 class TeamCalendarController extends Controller

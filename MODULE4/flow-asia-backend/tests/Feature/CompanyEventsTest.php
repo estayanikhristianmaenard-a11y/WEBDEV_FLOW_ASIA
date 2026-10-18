@@ -1,7 +1,7 @@
 <?php
 
-use App\Models\CompanyEvent;
-use App\Models\User;
+use FlowAsia\Module4\Models\CompanyEvent;
+use FlowAsia\Module4\Models\User;
 
 function eventPayload(): array
 {

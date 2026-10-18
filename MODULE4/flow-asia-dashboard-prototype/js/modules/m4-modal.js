@@ -8,6 +8,13 @@ export function initModal() {
   });
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape') closeModal();
+    const modal = document.getElementById('day-modal');
+    if (event.key === 'Tab' && modal.classList.contains('open')) {
+      const focusable = [...modal.querySelectorAll('button, a[href], input, select, textarea')].filter(item => !item.disabled);
+      const first = focusable[0], last = focusable.at(-1);
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    }
   });
 }
 
@@ -65,5 +72,8 @@ export function openDayModal(day, data) {
 }
 
 function closeModal() {
-  document.getElementById('day-modal').classList.remove('open');
+  const modal = document.getElementById('day-modal');
+  if (!modal.classList.contains('open')) return;
+  modal.classList.remove('open');
+  if (modal.dataset.returnDate) document.querySelector(`#staff-calendar-grid button[data-date="${modal.dataset.returnDate}"]`)?.focus();
 }

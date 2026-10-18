@@ -1,45 +1,28 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace FlowAsia\Module4\Http\Controllers;
 
-use App\Http\Requests\EmployeeSearchRequest;
-use App\Models\Employee;
-use Illuminate\Database\Eloquent\Builder;
+use FlowAsia\Module4\Contracts\CalendarEmployeeDirectory;
+use FlowAsia\Module4\Http\Requests\EmployeeSearchRequest;
+use FlowAsia\Module4\Services\CalendarEmployee;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Gate;
 
 class EmployeeSearchController extends Controller
 {
-    public function __invoke(EmployeeSearchRequest $request): JsonResponse
+    public function __invoke(EmployeeSearchRequest $request, CalendarEmployeeDirectory $directory): JsonResponse
     {
-        $query = Employee::query()->visibleTo($request->user())
-            ->select(['id', 'employee_no', 'first_name', 'last_name', 'position', 'department_id'])
-            ->with('department:id,name');
-
-        $term = $request->validated('q');
-        $patternFor = fn (string $value) => '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $value).'%';
-        $query->where(function (Builder $match) use ($term, $patternFor) {
-            $match->where(function (Builder $names) use ($term, $patternFor) {
-                foreach (explode(' ', $term) as $word) {
-                    $pattern = $patternFor($word);
-                    $names->where(fn (Builder $name) => $name
-                        ->whereRaw("LOWER(first_name) LIKE LOWER(?) ESCAPE '!'", [$pattern])
-                        ->orWhereRaw("LOWER(last_name) LIKE LOWER(?) ESCAPE '!'", [$pattern]));
-                }
-            })->orWhereRaw("LOWER(employee_no) LIKE LOWER(?) ESCAPE '!'", [$patternFor($term)])
-                ->orWhereHas('department', fn (Builder $department) => $department
-                    ->whereRaw("LOWER(name) LIKE LOWER(?) ESCAPE '!'", [$patternFor($term)]));
-        });
-
-        $results = $query->orderBy('last_name')->orderBy('first_name')->orderBy('id')
-            ->limit(config('calendar.search.limit'))->get()
-            ->map(fn (Employee $employee) => [
+        $results = $directory->search($request->user(), $request->validated('q'))
+            ->filter(fn (CalendarEmployee $employee): bool => Gate::forUser($request->user())->allows('viewCalendar', $employee))
+            ->take(config('module4_calendar.search.limit'))
+            ->map(fn (CalendarEmployee $employee): array => [
                 'id' => $employee->id,
                 'employee_no' => $employee->employee_no,
                 'name' => $employee->first_name.' '.$employee->last_name,
                 'position' => $employee->position,
-                'department' => $employee->department->name,
-            ]);
+                'department' => $employee->department?->name,
+            ])->values();
 
-        return response()->json(['data' => $results]);
+        return response()->json(['data' => $results])->header('Cache-Control', 'private, no-store');
     }
 }

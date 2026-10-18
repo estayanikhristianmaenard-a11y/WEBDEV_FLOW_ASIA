@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Models;
+namespace FlowAsia\Module4\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;

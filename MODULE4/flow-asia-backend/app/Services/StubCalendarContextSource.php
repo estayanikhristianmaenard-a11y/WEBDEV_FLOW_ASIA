@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Services;
+namespace FlowAsia\Module4\Services;
 
-use App\Contracts\CalendarContextSource;
-use App\Models\CalendarReport;
-use App\Models\Employee;
 use Carbon\CarbonInterface;
+use FlowAsia\Module4\Contracts\CalendarContextSource;
+use FlowAsia\Module4\Models\CalendarReport;
+use FlowAsia\Module4\Models\Employee;
 use Illuminate\Support\Collection;
 
 class StubCalendarContextSource implements CalendarContextSource

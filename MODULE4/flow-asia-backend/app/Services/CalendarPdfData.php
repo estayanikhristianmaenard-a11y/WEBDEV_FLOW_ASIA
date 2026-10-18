@@ -1,24 +1,27 @@
 <?php
 
-namespace App\Services;
+namespace FlowAsia\Module4\Services;
 
-use App\Models\Employee;
-use App\Models\User;
 use Carbon\CarbonImmutable;
+use FlowAsia\Module4\Contracts\CalendarIdentitySource;
+use FlowAsia\Module4\Models\Employee;
+use Illuminate\Contracts\Auth\Authenticatable;
 
 class CalendarPdfData
 {
     public function __construct(private CalendarMonthService $calendar) {}
 
-    public function build(Employee $employee, User $generatedBy, string $month): array
+    public function build(Employee|CalendarEmployee $employee, Authenticatable $generatedBy, string $month): array
     {
-        $from = CarbonImmutable::createFromFormat('!Y-m', $month, config('app.timezone'))->startOfMonth();
+        $employee = $employee instanceof Employee ? CalendarEmployee::fromModel($employee) : $employee;
+        $generatedBy = (object) app(CalendarIdentitySource::class)->forUser($generatedBy);
+        $from = CarbonImmutable::createFromFormat('!Y-m', $month, config('module4.timezone'))->startOfMonth();
         $calendar = $this->calendar->build($employee, $month);
         $rows = $calendar['days']->keyBy('date');
         $events = $calendar['company_events'];
-        $statuses = config('calendar.statuses');
-        $statuses['invalid'] ??= config('calendar.invalid_status');
-        $statuses['unrecorded'] ??= config('calendar.unrecorded_status');
+        $statuses = config('module4_calendar.statuses');
+        $statuses['invalid'] ??= config('module4_calendar.invalid_status');
+        $statuses['unrecorded'] ??= config('module4_calendar.unrecorded_status');
         $summary = $calendar['summary']['status_counts'];
         $cells = array_fill(0, $from->dayOfWeek, null);
         for ($day = 1; $day <= $from->daysInMonth; $day++) {
@@ -37,7 +40,7 @@ class CalendarPdfData
 
         return compact('employee', 'generatedBy', 'statuses', 'summary') + [
             'monthTitle' => $from->format('F Y'), 'weeks' => array_chunk($cells, 7),
-            'generatedAt' => CarbonImmutable::now(config('app.timezone')),
+            'generatedAt' => CarbonImmutable::now(config('module4.timezone')),
             'missingDays' => $from->daysInMonth - $rows->count(),
             'totals' => $calendar['summary'],
         ];
