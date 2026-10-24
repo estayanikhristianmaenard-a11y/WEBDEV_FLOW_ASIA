@@ -8,7 +8,8 @@
 .employee-search-name { font-size: .88rem; font-weight: 700; }
 .employee-search-meta { font-size: .75rem; color: var(--ink-muted); }
 #employee-search-results > p { padding: 12px 16px; margin: 0; }
-.company-event-marker { font-size: .65rem; color: var(--g); overflow-wrap: anywhere; order: 1; }
+.company-event-marker { font-size: .65rem; color: var(--marker-event-text); overflow-wrap: anywhere; order: 1; }
+.cell.s-L .company-event-marker { color: var(--marker-event-text); }
 /* Keep attendance at the bottom when company events share the cell. */
 .cell .cell-tag { order: 2; }
 #team-indicators p { font-size: .85rem; line-height: 1.5; }
@@ -31,7 +32,7 @@
 .team-calendar-table thead th { position: sticky; top: 0; background: var(--card); z-index: 2; padding: 8px; min-width: 68px; }
 .team-calendar-table .team-employee-heading { position: sticky; left: 0; background: var(--card); z-index: 1; min-width: 170px; max-width: 200px; padding: 10px; text-align: left; }
 .team-calendar-table thead .team-employee-heading { z-index: 3; }
-.team-calendar-table .team-today { box-shadow: inset 0 3px var(--g); }
+.team-calendar-table .team-today { box-shadow: inset 0 2px var(--marker-overtime-edge); }
 .team-weekday, .team-employee-meta { display: block; font-size: .65rem; color: var(--ink-muted); }
 .team-employee-link { border: 0; background: none; color: var(--ink); font: inherit; font-weight: 700; text-align: left; cursor: pointer; overflow-wrap: anywhere; }
 .team-employee-link:hover { text-decoration: underline; }
@@ -39,19 +40,18 @@
 .team-calendar-day:hover { background: var(--soft); }
 .team-calendar-day:focus-visible, .team-employee-link:focus-visible, .team-calendar-scroll:focus-visible { outline: 2px solid var(--g); outline-offset: -2px; }
 .team-status { padding: 2px 5px; border-radius: 4px; font-size: .65rem; font-weight: 800; background: var(--soft); color: var(--ink); }
-.team-status-L { background: var(--ink); color: var(--bg); }
-.team-status-A { background: var(--danger); color: #000; }
-.team-status-LV, .team-status-PL { background: var(--info); color: #000; }
-[data-theme="light"] .team-status-LV, [data-theme="light"] .team-status-PL { color: #fff; }
+.team-status-L { background: var(--marker-late); color: var(--marker-ink); }
+.team-status-A { background: var(--marker-absent); color: var(--marker-ink); }
+.team-status-LV, .team-status-PL { background: var(--marker-leave); color: var(--marker-ink); }
 .team-status-PL { background-image: repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(0,0,0,.2) 3px, rgba(0,0,0,.2) 6px); }
-.team-status-OT, .team-status-H { background: var(--g); color: #000; }
-.team-status-INV, .team-status-HD { background: var(--warning); color: #000; }
-.team-status-RD { color: var(--ink-muted); }
-.team-leave-overlap { box-shadow: inset 0 -3px var(--warning); }
+.team-status-OT, .team-status-H { background: var(--marker-overtime); color: var(--marker-ink); }
+.team-status-INV, .team-status-HD { background: var(--marker-invalid); color: var(--marker-ink); }
+.team-status-RD { background: var(--marker-rest); color: var(--marker-ink); }
+.team-leave-overlap { box-shadow: inset 0 -2px var(--marker-invalid-edge); }
 .team-overlap-marker, .team-pending-ot { font-size: .6rem; color: var(--ink); }
 .calendar-secondary-status, .calendar-report-marker { font-size: .6rem; color: var(--ink); overflow-wrap: anywhere; }
 .calendar-short-label { display: none; }
-.cell.s-L .calendar-secondary-status, .cell.s-L .calendar-report-marker { color: var(--bg); }
+.cell.s-L .calendar-secondary-status, .cell.s-L .calendar-report-marker { color: var(--ink); }
 .widget-box h2:not(:first-child) { margin-top: 20px; }
 @media (max-width: 520px) {
   #staff-calendar-grid .calendar-full-label { display: none; }

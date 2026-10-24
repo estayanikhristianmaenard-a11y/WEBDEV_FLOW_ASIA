@@ -46,32 +46,37 @@ body[data-connected] .cell.empty { visibility: hidden; }
 body[data-connected] .cell-num { font-size: 16px; font-weight: 600; }
 body[data-connected] .cell-tag { text-transform: none; margin-top: auto; padding: 0; font-size: 11px; line-height: 1.25; border-radius: 5px; align-self: flex-start; text-align: left; background: none; color: inherit; }
 body[data-connected] .cell.s-P .cell-tag, body[data-connected] .cell.s-RD .cell-tag { display: none; }
-body[data-connected] .cell.s-L { background: var(--ink); color: var(--bg); }
-body[data-connected] .cell.s-L .cell-tag { background: none; color: inherit; }
-body[data-connected] .cell.s-A { border: 3px solid var(--ink); }
-body[data-connected] .cell.s-A .cell-tag { background: none; color: inherit; }
-body[data-connected] .cell.s-LV, body[data-connected] .cell.s-PL { border: 2px dashed var(--ink); }
-body[data-connected] .cell.s-LV .cell-tag, body[data-connected] .cell.s-PL .cell-tag { background: none; color: inherit; }
-body[data-connected] .cell.s-PL { background-image: repeating-linear-gradient(135deg, var(--soft) 0 6px, var(--card) 6px 12px); }
-body[data-connected] .cell.s-OT .cell-tag { background: var(--g); color: #0A0A0A; padding: 0 5px; }
-body[data-connected] .cell.s-H { background: repeating-linear-gradient(135deg, var(--soft) 0 6px, var(--card) 6px 12px); }
-body[data-connected] .cell.s-H .cell-tag { background: none; color: inherit; }
+body[data-connected] .cell.s-L { background: var(--card); color: var(--ink); border-color: var(--marker-late-edge); }
+body[data-connected] .cell.s-L .cell-tag { background: var(--marker-late); color: var(--marker-ink); padding: 0 5px; }
+body[data-connected] .cell.s-A { border: 1px solid var(--marker-absent-edge); }
+body[data-connected] .cell.s-A .cell-tag { background: var(--marker-absent); color: var(--marker-ink); padding: 0 5px; }
+body[data-connected] .cell.s-LV, body[data-connected] .cell.s-PL { border: 1px dashed var(--marker-leave-edge); }
+body[data-connected] .cell.s-LV .cell-tag, body[data-connected] .cell.s-PL .cell-tag { background: var(--marker-leave); color: var(--marker-ink); padding: 0 5px; }
+body[data-connected] .cell.s-PL { background-image: repeating-linear-gradient(135deg, var(--marker-leave-stripe) 0 6px, transparent 6px 12px); }
+body[data-connected] .cell.s-OT { border-color: var(--marker-overtime-edge); }
+body[data-connected] .cell.s-OT .cell-tag { background: var(--marker-overtime); color: var(--marker-ink); padding: 0 5px; }
+body[data-connected] .cell.s-H { background: repeating-linear-gradient(135deg, var(--marker-overtime-stripe) 0 6px, var(--card) 6px 12px); border-color: var(--marker-overtime-edge); }
+body[data-connected] .cell.s-H .cell-tag { background: var(--marker-overtime); color: var(--marker-ink); padding: 0 5px; }
+body[data-connected] .cell.s-INV, body[data-connected] .cell.s-HD { border-color: var(--marker-invalid-edge); }
+body[data-connected] .cell.s-INV .cell-tag, body[data-connected] .cell.s-HD .cell-tag { background: var(--marker-invalid); color: var(--marker-ink); padding: 0 5px; }
 body[data-connected] .cell.s-RD { background: var(--soft); color: var(--ink-muted); }
 body[data-connected] .cell.s-RD .cell-num { color: inherit; }
 body[data-connected] .cell.selected { outline: 3px solid var(--ink); outline-offset: 2px; }
-body[data-connected] .cell.today { box-shadow: inset 0 -4px var(--g); }
+body[data-connected] .cell.today { box-shadow: inset 0 -2px var(--marker-overtime-edge); }
 body[data-connected] .lg { border: 0; padding: 0; gap: 8px 10px; }
 body[data-connected] .lg-item { color: var(--ink); font-size: 12px; font-weight: 600; }
 body[data-connected] .extended-legend { position: relative; font-size: 12px; }
 body[data-connected] .extended-legend summary { cursor: pointer; }
 body[data-connected] .extended-legend-items { position: absolute; bottom: 24px; right: 0; z-index: 2; display: flex; flex-direction: column; gap: 8px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px; min-width: 180px; }
 body[data-connected] .legend-swatch { width: 18px; height: 18px; border-radius: 5px; border: 1.5px solid var(--line); }
-body[data-connected] .legend-swatch-L { background: var(--ink); }
-body[data-connected] .legend-swatch-A { border: 3px solid var(--ink); }
-body[data-connected] .legend-swatch-LV, body[data-connected] .legend-swatch-PL { border: 2px dashed var(--ink); }
-body[data-connected] .legend-swatch-OT { background: var(--g); border-color: var(--g); }
-body[data-connected] .legend-swatch-RD, body[data-connected] .legend-swatch-H { background: var(--soft); }
-body[data-connected] .legend-swatch-INV, body[data-connected] .legend-swatch-HD { border-color: var(--warning); background: var(--warning); }
+body[data-connected] .legend-swatch-L { background: var(--marker-late); border-color: var(--marker-late-edge); }
+body[data-connected] .legend-swatch-A { border: 1px solid var(--marker-absent-edge); }
+body[data-connected] .legend-swatch-LV, body[data-connected] .legend-swatch-PL { border: 1px dashed var(--marker-leave-edge); }
+body[data-connected] .legend-swatch-PL { background: repeating-linear-gradient(135deg, var(--marker-leave-stripe) 0 3px, transparent 3px 6px); }
+body[data-connected] .legend-swatch-OT { background: var(--marker-overtime); border-color: var(--marker-overtime-edge); }
+body[data-connected] .legend-swatch-RD { background: var(--marker-rest); border-color: var(--marker-rest); }
+body[data-connected] .legend-swatch-H { border-color: var(--marker-overtime-edge); background: repeating-linear-gradient(135deg, var(--marker-overtime-stripe) 0 3px, var(--card) 3px 6px); }
+body[data-connected] .legend-swatch-INV, body[data-connected] .legend-swatch-HD { border-color: var(--marker-invalid-edge); background: var(--marker-invalid); }
 body[data-connected] .selected-day-details { border: 1px solid var(--line); background: var(--soft); border-radius: 18px; padding: 20px; min-height: 102px; }
 body[data-connected] .selected-day-details h3 { font-size: 16px; line-height: 1.5; }
 body[data-connected] .selected-day-details p { margin-top: 6px; font-size: 16px; color: var(--ink-muted); }

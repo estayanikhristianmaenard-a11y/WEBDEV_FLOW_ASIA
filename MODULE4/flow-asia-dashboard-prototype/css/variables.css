@@ -10,6 +10,22 @@
   --danger: #FF4D4D;
   --warning: #FFB800;
   --info: #38BDF8;
+  --marker-late: #EAAF7D;
+  --marker-absent: #DF98A6;
+  --marker-leave: #92BDDF;
+  --marker-invalid: #E3CB83;
+  --marker-overtime: #94C8A5;
+  --marker-rest: #BEBACE;
+  --marker-late-edge: #BF885B;
+  --marker-absent-edge: #B77584;
+  --marker-leave-edge: #729BBE;
+  --marker-invalid-edge: #B39B56;
+  --marker-overtime-edge: #719E80;
+  --marker-event-text: #B8A0D5;
+  --marker-ink: #3D3840;
+  --marker-invalid-stripe: rgba(227, 203, 131, 0.07);
+  --marker-overtime-stripe: rgba(148, 200, 165, 0.07);
+  --marker-leave-stripe: rgba(146, 189, 223, 0.07);
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
@@ -28,6 +44,7 @@
   --danger: #E53E3E;
   --warning: #DD6B20;
   --info: #0284C7;
+  --marker-event-text: #69537F;
 }
 
 * {
