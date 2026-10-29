@@ -191,12 +191,16 @@ it('preserves canonical event creators locations and timed events while using so
         'event_title' => 'Timed shoot', 'event_type' => 'shoot', 'start_datetime' => '2026-10-12 10:00:00',
         'end_datetime' => '2026-10-12 11:00:00', 'is_all_day' => false, 'status' => 'ACTIVE', 'created_by' => 11,
     ], 'company_event_id');
-    $this->getJson('/modules/m4/calendar/events?start=2026-10-01&end=2026-11-01')->assertOk()->assertJsonPath('0.allDay', false)
-        ->assertJsonPath('0.start', '2026-10-12T10:00:00+08:00');
+    $this->getJson('/modules/m4/calendar/events?start=2026-10-01&end=2026-11-01')->assertOk()->assertJsonPath('0.allDay', true)
+        ->assertJsonPath('0.start', '2026-10-12')->assertJsonPath('0.end', '2026-10-13')
+        ->assertJsonPath('0.extendedProps.sourceAllDay', false);
     $pdf = app(CalendarPdfData::class)->build(app(CalendarEmployeeDirectory::class)->find(103), misUser(), '2026-10');
     $day = collect($pdf['weeks'])->flatten(1)->filter()->firstWhere('day', 12);
     expect($day['events'])->toHaveCount(1);
     expect(fn () => app(CompanyEventSource::class)->update($timedId, $payload))->toThrow(ValidationException::class);
+    expect($this->mis->table('company_events')->where('company_event_id', $timedId)->value('start_datetime'))->toBe('2026-10-12 10:00:00');
+    $this->mis->table('company_events')->where('company_event_id', $timedId)->update(['end_datetime' => '2026-10-13 00:00:00']);
+    $this->getJson('/modules/m4/calendar/events?start=2026-10-01&end=2026-11-01')->assertOk()->assertJsonPath('0.end', '2026-10-13');
 });
 
 it('never maps local demo numeric IDs onto unrelated MySQL accounts', function () {
@@ -209,6 +213,12 @@ it('never maps local demo numeric IDs onto unrelated MySQL accounts', function (
     $this->postJson('/modules/m4/hr/events', ['title' => 'Denied', 'type' => 'other', 'starts_on' => '2026-10-12', 'ends_on' => '2026-10-12'])->assertForbidden();
     expect($this->mis->table('company_events')->count())->toBe(0);
     expect(fn () => app(DemoSeeder::class)->run())->toThrow(RuntimeException::class);
+    $linked = new User;
+    $linked->forceFill(['id' => 999, 'name' => 'Local HR', 'email' => 'crew101@example.test', 'role' => 'hr_admin', 'employee_id' => 999]);
+    $this->actingAs($linked);
+    $this->postJson('/modules/m4/hr/events', ['title' => 'Linked creator', 'type' => 'other', 'starts_on' => '2026-10-12', 'ends_on' => '2026-10-12'])
+        ->assertCreated()->assertJsonPath('data.created_by', 11);
+    expect((int) $this->mis->table('company_events')->value('created_by'))->toBe(11);
 });
 
 it('batches group reads and keeps scheduled days without punches unrecorded', function () {

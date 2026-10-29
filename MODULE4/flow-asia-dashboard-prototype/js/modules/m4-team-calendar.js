@@ -7,18 +7,10 @@ export function calendarDates(month) {
   return Array.from({ length: end.getUTCDate() }, (_, index) => `${month}-${String(index + 1).padStart(2, '0')}`);
 }
 
-export function eventOccursOnDate(event, date) {
-  const start = event.start.slice(0, 10);
-  if (!event.end) return start === date;
-  const end = event.end.slice(0, 10);
-  const endsDuringDay = event.end.includes('T') && !/T00:00(?::00(?:\.0+)?)?(?:Z|[+-]\d{2}:?\d{2})?$/.test(event.end);
-  return start <= date && (end > date || (end === date && endsDuringDay));
-}
-
 export function buildTeamCalendar(team, events, month, departmentId = '') {
   const dates = calendarDates(month);
   const employees = team.employees.filter(employee => !departmentId || String(employee.department?.id) === String(departmentId));
-  const eventsByDate = new Map(dates.map(date => [date, events.filter(event => eventOccursOnDate(event, date))]));
+  const eventsByDate = new Map(dates.map(date => [date, events.filter(event => event.start <= date && event.end > date)]));
   const pendingLeave = new Set(team.pending.leave.map(item => `${item.employee_id}:${item.date}`));
   const pendingOvertime = new Map(team.pending.overtime.map(item => [`${item.employee_id}:${item.date}`, item.hours]));
   const overlaps = new Set(team.leave_overlaps.flatMap(item => item.employee_ids.map(id => `${id}:${item.date}`)));

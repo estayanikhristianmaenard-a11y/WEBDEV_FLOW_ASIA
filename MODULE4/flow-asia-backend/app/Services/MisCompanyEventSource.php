@@ -20,16 +20,18 @@ class MisCompanyEventSource implements CompanyEventSource
             ->orderBy('start_datetime')->orderBy('company_event_id')->get()->map(function (object $event): array {
                 $start = CarbonImmutable::parse($event->start_datetime, config('module4.timezone'));
                 $end = CarbonImmutable::parse($event->end_datetime ?? $event->start_datetime, config('module4.timezone'));
+                $exclusiveEnd = $event->is_all_day || ! $event->end_datetime || ! $end->isStartOfDay() || $end->lte($start)
+                    ? $end->addDay() : $end;
 
                 return [
                     'id' => 'company-event-'.$event->company_event_id, 'title' => $event->event_title,
-                    'start' => $event->is_all_day ? $start->toDateString() : $start->toIso8601String(),
-                    'end' => $event->is_all_day ? $end->addDay()->toDateString() : ($event->end_datetime ? $end->toIso8601String() : null),
-                    'allDay' => (bool) $event->is_all_day,
+                    'start' => $start->toDateString(), 'end' => $exclusiveEnd->toDateString(),
+                    'allDay' => true,
                     'classNames' => [config('module4_calendar.company_event.class')],
                     'extendedProps' => [
                         'kind' => 'company_event', 'eventId' => (int) $event->company_event_id,
                         'type' => $event->event_type, 'description' => $event->description,
+                        'sourceAllDay' => (bool) $event->is_all_day,
                         'marker' => config('module4_calendar.company_event.marker'),
                     ],
                 ];
@@ -48,7 +50,8 @@ class MisCompanyEventSource implements CompanyEventSource
     public function create(array $attributes, int|string $createdBy): array
     {
         $this->requireLinkedUser();
-        abort_unless((string) $createdBy === (string) $this->actorId(), 403);
+        abort_unless((string) $createdBy === (string) Auth::user()->getAuthIdentifier(), 403);
+        $createdBy = $this->actorId();
         $id = DB::connection(config('module4.mis_connection'))->table('company_events')->insertGetId([
             ...$this->attributes($attributes), 'created_by' => $createdBy, 'is_all_day' => true,
             'status' => 'ACTIVE', 'created_at' => now(config('module4.timezone'))->format('Y-m-d H:i:s'),

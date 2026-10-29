@@ -1,5 +1,5 @@
 import { request } from '../core/api.js';
-import { calendarDates, eventOccursOnDate, renderTeamCalendar, renderTeamLegend } from './m4-team-calendar.js';
+import { calendarDates, renderTeamCalendar, renderTeamLegend } from './m4-team-calendar.js';
 import { mountDashboardShell, renderSelectedDay, renderToday } from './m4-dashboard-shell.js';
 import { installCalendarSync } from './m4-sync.js';
 
@@ -345,7 +345,7 @@ async function inspectTeamEmployee(employee, date) {
     await loadEmployeeCalendar();
     if (requestedVersion !== employeeLoadVersion || selectedId !== employee.id || requestedMonth !== month || !employeeCalendar) return;
     if (date) {
-      showDay(date, employeeCalendar.days.find(day => day.date === date), events.filter(event => eventOccursOnDate(event, date)));
+      showDay(date, employeeCalendar.days.find(day => day.date === date), events.filter(event => event.start <= date && event.end > date));
     } else {
       $('calendar-inspection-header').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
@@ -450,18 +450,13 @@ function renderCalendar() {
   $('kpi-cutoff-ot').textContent = employee?.summary.cutoff_ot_hours ?? '—';
   $('kpi-cutoff-ot').closest('.card').querySelector('.kpi-subtext').textContent = employee?.cutoff ? `${employee.cutoff.start} – ${employee.cutoff.end}` : 'Pay period unavailable';
   renderEmployeeWidgets(employee);
-  if (!employee && !(selectedId ?? config.user.employee_id)) {
-    grid.append(element('p', canInspect ? 'Select an employee to view their calendar.' : 'No employee profile is linked to this account. Contact HR.', 'calendar-empty-state muted'));
-    updateSelectedDay();
-    return;
-  }
   const displayDates = calendarView === 'week' ? weekDates : [...Array(offset).fill(null), ...allDates];
   for (const date of displayDates) {
     if (!date) { grid.append(element('div', undefined, 'cell empty')); continue; }
     const number = Number(date.slice(-2));
     const row = days.find(day => day.date === date);
     const status = statuses[row?.status] || ['', row?.status || (employee ? 'No record' : 'Not loaded')];
-    const dayEvents = events.filter(event => eventOccursOnDate(event, date));
+    const dayEvents = events.filter(event => event.start <= date && event.end > date);
     const cell = button('', () => showDay(date, row, dayEvents), `cell${status[0] ? ` s-${status[0]}` : ''}`);
     cell.dataset.date = date;
     cell.classList.toggle('today', date === config.today);
@@ -524,7 +519,7 @@ function updateSelectedDay() {
   const row = employeeCalendar?.days.find(day => day.date === selectedDate);
   const status = statuses[row?.status]?.[1] || (employeeCalendar ? 'No record' : 'Not loaded');
   renderSelectedDay(selectedDate, row, status, employeeCalendar, employeeLoadError,
-    events.filter(event => eventOccursOnDate(event, selectedDate)));
+    events.filter(event => event.start <= selectedDate && event.end > selectedDate));
 }
 
 function renderEmployeeWidgets(employee) {
@@ -557,7 +552,7 @@ function renderEvents() {
   events.forEach(event => {
     const item = element('div', undefined, 'req-item');
     item.append(element('p', `◆ ${event.title} · ${event.start}`));
-    if (canManage && event.allDay !== false && Object.hasOwn(config.eventTypes, event.extendedProps.type)) {
+    if (canManage) {
       item.append(button('Edit', () => editEvent(event)), button('Delete', async action => {
         const control = action.currentTarget;
         if (control.disabled) return;
@@ -571,8 +566,6 @@ function renderEvents() {
         catch (error) { message(error.message); }
         finally { control.disabled = false; control.textContent = 'Delete'; }
       }));
-    } else if (canManage) {
-      item.append(element('span', 'Read only', 'muted'));
     }
     list.append(item);
   });

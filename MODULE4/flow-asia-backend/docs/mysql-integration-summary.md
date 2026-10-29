@@ -7,6 +7,12 @@ employees, calendar records, balances/pay periods, company events and identity.
 It reads the shared field names directly, without renaming tables or adding the
 standalone demo columns to the shared schema.
 
+Scope: retain the existing module and use the supplied database with only the
+necessary compatibility code. Frontend scripts/tests, the PDF generator,
+controllers and diagnostic command match the pre-integration version
+(`b5483ab`), including the approved pastel styling. Changes are confined to the
+database adapters, connection settings, demo-isolation guards and their tests.
+
 ## Current local setup
 
 - MySQL `flow_asia_mis` contains the supplied **46 tables and zero records**.
@@ -33,11 +39,11 @@ account records. An empty shared database never falls back to demo attendance.
 - Map active MySQL accounts and roles. Local preview accounts match shared
   accounts by email; their SQLite numeric IDs are never reused as shared IDs.
   Event writes require a linked active shared account.
-- Preserve timed events, creators and locations. The date-only event editor
-  manages all-day events; cancellation retains the underlying event record.
-  Timed events appear on the correct days in calendars and PDF exports.
+- Translate shared event timestamps into the existing date-only calendar format
+  inside the adapter. Original times, creators and locations remain in MySQL.
+  All-day events use the existing editor; editing timed source events is rejected
+  rather than discarding their time information. Cancellation retains the row.
 - Disable demo migrations and demo seeding when `M4_DATA_SCHEMA=mis`.
-  `m4:check` also verifies the required shared tables and columns.
 
 ## Connection and handoff
 
@@ -84,12 +90,13 @@ main-system login integration.
 
 ## Verification
 
-- Full Laravel suite: **126 tests passed**. After the final event/PDF changes,
-  the **12 affected tests passed** again.
+- The reduced compatibility revision passed **43 affected backend tests**,
+  including the original integration, event and PDF tests. The earlier full
+  Laravel suite passed 126 tests.
 - Supplied schema imported into a separate MySQL test database: **7 integration
   tests passed**. Fixtures were rolled back and that test database was removed.
-- Frontend regressions: **22 tests passed**; Laravel Pint and whitespace checks
-  passed.
+- The original **21 frontend tests passed** with the restored scripts.
+  Laravel Pint and whitespace checks passed.
 - Browser checks passed for the live empty MySQL calendar, team and event feeds,
   no demo fallback, mobile dark/light layouts and no JavaScript errors.
 - Exact row comparisons confirmed the preserved SQLite business tables were
