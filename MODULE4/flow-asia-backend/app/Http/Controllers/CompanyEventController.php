@@ -3,6 +3,7 @@
 namespace FlowAsia\Module4\Http\Controllers;
 
 use Carbon\CarbonImmutable;
+use FlowAsia\Module4\Contracts\CalendarIdentitySource;
 use FlowAsia\Module4\Contracts\CompanyEventSource;
 use FlowAsia\Module4\Http\Requests\CompanyEventFeedRequest;
 use FlowAsia\Module4\Http\Requests\CompanyEventRequest;
@@ -23,7 +24,7 @@ class CompanyEventController extends Controller
 
     public function store(CompanyEventRequest $request): JsonResponse
     {
-        $event = $this->events->create($request->validated(), $request->user()->getAuthIdentifier());
+        $event = $this->events->create($request->validated(), app(CalendarIdentitySource::class)->forUser($request->user())['id']);
 
         return response()->json(['data' => $event], 201);
     }

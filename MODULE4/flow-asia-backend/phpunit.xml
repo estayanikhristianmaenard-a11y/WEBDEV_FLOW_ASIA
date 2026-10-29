@@ -20,6 +20,7 @@
     <php>
         <env name="APP_ENV" value="testing"/>
         <env name="M4_MODE" value="standalone" force="true"/>
+        <env name="M4_DATA_SCHEMA" value="demo" force="true"/>
         <env name="M4_ROUTE_PREFIX" value="" force="true"/>
         <env name="M4_ROUTE_NAME_PREFIX" value="" force="true"/>
         <env name="M4_STANDALONE_PREVIEW" value="false" force="true"/>

@@ -31,7 +31,12 @@ class CalendarPdfData
                 array_unique([$row['status'], ...$row['additional_statuses']])) : [];
             $cells[] = [
                 'day' => $day, 'codes' => $codes,
-                'events' => $events->filter(fn (array $event): bool => $event['start'] <= $date->toDateString() && $event['end'] > $date->toDateString())->values(),
+                'events' => $events->filter(function (array $event) use ($date): bool {
+                    $start = CarbonImmutable::parse($event['start'], config('module4.timezone'));
+                    $end = isset($event['end']) ? CarbonImmutable::parse($event['end'], config('module4.timezone')) : null;
+
+                    return $end ? $start->lt($date->addDay()) && $end->gt($date) : $start->isSameDay($date);
+                })->values(),
             ];
         }
         while (count($cells) % 7 !== 0) {

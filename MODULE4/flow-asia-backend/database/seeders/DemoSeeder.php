@@ -15,7 +15,7 @@ class DemoSeeder extends Seeder
 {
     public function run(): void
     {
-        if (config('module4.mode') !== 'standalone' || ! app()->environment(['local', 'testing'])) {
+        if (config('module4.mode') !== 'standalone' || config('module4.data_schema') !== 'demo' || ! app()->environment(['local', 'testing'])) {
             throw new \RuntimeException('Demo accounts are only allowed in standalone local or testing environments.');
         }
 

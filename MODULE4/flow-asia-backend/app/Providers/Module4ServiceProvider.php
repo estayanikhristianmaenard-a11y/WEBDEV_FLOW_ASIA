@@ -73,7 +73,7 @@ class Module4ServiceProvider extends ServiceProvider
         ));
         $root = dirname(__DIR__, 2);
         $this->loadViewsFrom($root.'/resources/views', 'm4');
-        if (config('module4.mode') === 'standalone') {
+        if (config('module4.mode') === 'standalone' && config('module4.data_schema') === 'demo') {
             $this->loadMigrationsFrom($root.'/database/migrations/standalone');
         }
         Route::bind('calendarEmployee', function (string $id): CalendarEmployee {

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { calendarDates, buildTeamCalendar } from '../js/modules/m4-team-calendar.js';
+import { calendarDates, buildTeamCalendar, eventOccursOnDate } from '../js/modules/m4-team-calendar.js';
 
 function fixture() {
   return {
@@ -45,6 +45,18 @@ test('company event coverage includes the stored end day and excludes the feed e
   assert.equal(result.dates[11].events.length, 1);
   assert.equal(result.dates[12].events.length, 0);
   assert.equal(result.rows[1].cells[11].events[0].title, 'Town hall');
+});
+
+test('timed MySQL events mark their first day and respect exclusive midnight ends', () => {
+  const timed = { start: '2026-10-12T10:00:00+08:00', end: '2026-10-12T11:00:00+08:00', allDay: false };
+  assert.equal(eventOccursOnDate(timed, '2026-10-12'), true);
+  assert.equal(eventOccursOnDate(timed, '2026-10-13'), false);
+  const overnight = { ...timed, end: '2026-10-13T00:00:00+08:00' };
+  assert.equal(eventOccursOnDate(overnight, '2026-10-12'), true);
+  assert.equal(eventOccursOnDate(overnight, '2026-10-13'), false);
+  assert.equal(eventOccursOnDate({ ...timed, end: null }, '2026-10-12'), true);
+  assert.equal(eventOccursOnDate({ ...timed, end: null }, '2026-10-13'), false);
+  assert.equal(buildTeamCalendar(fixture(), [timed], '2026-10').dates[11].events.length, 1);
 });
 
 test('overlap and pending markers belong to the matching employee and date', () => {

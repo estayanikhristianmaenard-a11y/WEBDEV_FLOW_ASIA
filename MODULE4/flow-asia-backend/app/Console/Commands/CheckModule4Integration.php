@@ -7,6 +7,7 @@ use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
 use Throwable;
 
 #[Signature('m4:check')]
@@ -23,6 +24,41 @@ class CheckModule4Integration extends Command
         if (! in_array($mode, ['standalone', 'shared'], true)) {
             $this->error('M4_MODE must be standalone or shared.');
             $failed = true;
+        }
+        if (! in_array(config('module4.data_schema'), ['demo', 'mis'], true)) {
+            $this->error('M4_DATA_SCHEMA must be demo or mis.');
+            $failed = true;
+        }
+        if (config('module4.data_schema') === 'mis') {
+            try {
+                $schema = Schema::connection(config('module4.mis_connection'));
+                foreach ([
+                    'employees' => ['employee_id', 'employee_number', 'department_id', 'position_id', 'hire_date'],
+                    'attendance_daily' => ['attendance_daily_id', 'attendance_date', 'clock_in', 'overtime_minutes'],
+                    'company_events' => ['company_event_id', 'event_title', 'start_datetime', 'end_datetime'],
+                    'leave_requests' => ['employee_id', 'start_date', 'end_date', 'status'],
+                    'overtime_requests' => ['employee_id', 'overtime_date', 'approved_minutes'],
+                    'users' => ['user_id', 'employee_id', 'role_id'],
+                    'roles' => ['role_id', 'role_name'],
+                    'departments' => ['department_id', 'department_name'],
+                    'positions' => ['position_id', 'position_name'],
+                    'schedules' => ['schedule_id', 'schedule_date', 'shift_id'],
+                    'shifts' => ['shift_id', 'start_time', 'end_time'],
+                    'holidays' => ['holiday_date', 'holiday_name'],
+                    'correction_requests' => ['correction_request_id', 'attendance_daily_id'],
+                    'leave_balances' => ['employee_id', 'remaining_days', 'leave_year'],
+                    'leave_types' => ['leave_type_id', 'leave_type_name'],
+                    'payroll_periods' => ['start_date', 'end_date', 'pay_date'],
+                ] as $table => $columns) {
+                    if (! $schema->hasColumns($table, $columns)) {
+                        throw new \LogicException('Missing or incompatible MIS table: '.$table);
+                    }
+                }
+                $this->info('MIS schema passed; reports remain unavailable because the supplied schema has no report source.');
+            } catch (Throwable $exception) {
+                $this->error('MIS schema: '.$exception->getMessage());
+                $failed = true;
+            }
         }
         foreach (Module4ServiceProvider::SOURCES as $key => $contract) {
             try {

@@ -32,6 +32,20 @@ return [
 
     'connections' => [
 
+        'm4_mis' => [
+            'driver' => 'mysql',
+            'host' => env('M4_MIS_HOST', '127.0.0.1'),
+            'port' => env('M4_MIS_PORT', '3306'),
+            'database' => env('M4_MIS_DATABASE', 'flow_asia_mis'),
+            'username' => env('M4_MIS_USERNAME', 'root'),
+            'password' => env('M4_MIS_PASSWORD', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_general_ci',
+            'timezone' => '+08:00',
+            'prefix' => '',
+            'strict' => true,
+        ],
+
         'sqlite' => [
             'driver' => 'sqlite',
             'url' => env('DB_URL'),

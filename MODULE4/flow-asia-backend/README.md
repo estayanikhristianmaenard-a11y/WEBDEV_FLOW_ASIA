@@ -18,6 +18,7 @@ Shared mode excludes all standalone migrations and demo identities.
 
 Guides:
 
+- [MySQL integration summary and handoff](docs/mysql-integration-summary.md)
 - [Dashboard](docs/dashboard-integration.md)
 - [Combined employee calendar](docs/employee-calendar.md)
 - [Search](docs/employee-search.md)
